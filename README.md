@@ -70,9 +70,9 @@ Noctilingo 本身不提供 AI 算力，它是「靈魂的容器」。
 </details>
 
 ---
-### 🫧 About ChaosXX™
+###  About ChaosXX™
 Noctilingo is developed and maintained by **ChaosXX™**. 
 
 ---
 *Language is the stage. The one who remembers you is the story's main character.* 🌙
-*Made with 🫧 by XiaXia & Cold Brew *
+*Made with  by XiaXia & Cold Brew *
