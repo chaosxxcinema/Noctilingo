@@ -10,6 +10,7 @@
 <link rel="icon" href="./icons/icon-16.png" sizes="16x16" type="image/png">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Noctilingo">
 <style>
@@ -1342,26 +1343,30 @@ function renderReading(reading,text){
 async function fetchReading(text){
   if(!String(text||"").trim()) return null;
   const _t=String(text||"").trim();
-  if(_t.length>240 || /[\u4e00-\u9fff]/.test(_t)) return null; // 巨獸文本(過長/混中文)不標:省 token、防 JSON 截斷噎死
+  if(_t.length>240 || /[\u4e00-\u9fff]/.test(_t)) { console.warn("[連讀標註] 跳過:文本過長或含中文",_t.length); return null; }
   try{
-    if(typeof buildAnnotatorSystem!=="function") return null; // 開源版抽掉 prompts.js 時,標註功能安靜下線,不炸
+    if(typeof buildAnnotatorSystem!=="function") { console.warn("[連讀標註] buildAnnotatorSystem 不存在,prompts.js 可能沒載入"); return null; }
     const sys=buildAnnotatorSystem();
     const raw=await callModel(sys,[{role:"user",content:String(text)}],800);
     const m=String(raw||"").replace(/```json/gi,"").replace(/```/g,"").match(/\{[\s\S]*\}/);
-    if(!m) return null;
-    let j=null; try{ j=JSON.parse(m[0]); }catch(_){ try{ j=JSON.parse(m[0].replace(/,\s*([}\]])/g,"$1")); }catch(__){ return null; } }
-    return (j&&Array.isArray(j.words)&&j.words.length)?{words:j.words}:null;
-  }catch(e){ return null; }
+    if(!m) { console.warn("[連讀標註] 模型回傳裡找不到 JSON,原始回應:",raw); return null; }
+    let j=null; try{ j=JSON.parse(m[0]); }catch(_){ try{ j=JSON.parse(m[0].replace(/,\s*([}\]])/g,"$1")); }catch(__){ console.warn("[連讀標註] JSON 解析失敗:",m[0]); return null; } }
+    if(!(j&&Array.isArray(j.words)&&j.words.length)) { console.warn("[連讀標註] 解析出來但 words 是空的或格式不對:",j); return null; }
+    return {words:j.words};
+  }catch(e){ console.warn("[連讀標註] 呼叫失敗:",e&&e.message||e); return null; }
 }
 async function annotateLatest(){
-  if(!S.reading) return;
+  if(!S.reading) return true; // 功能關著:不算失敗,不用跳提示
   const arr=S.messages;
   for(let i=arr.length-1;i>=0;i--){
     if(arr[i].role==="assistant"&&arr[i].en){
-      if(!arr[i].reading){ const r=await fetchReading(arr[i].en); if(r){ arr[i].reading=r; save(); renderThread(S.messages,$("chatScroll"),$("chatEmpty")); } }
-      break;
+      if(arr[i].reading) return true; // 已經標過,不重抓
+      const r=await fetchReading(arr[i].en);
+      if(r){ arr[i].reading=r; save(); renderThread(S.messages,$("chatScroll"),$("chatEmpty")); return true; }
+      return false; // fetchReading 失敗(原因已印在 Console)
     }
   }
+  return true; // 沒有可標的訊息,不算失敗
 }
 function updateReadingToggle(){ const b=$("readingToggle"); if(b){ b.classList.toggle("on",!!S.reading); b.title="連讀標註："+(S.reading?"開（再點關閉）":"關"); } }
 let skyFilter="", skySort="recent"; // "recent"=最近用過優先(舊預設) / "alpha"=按字母排序
@@ -1872,7 +1877,7 @@ function bind(){
   $("clearChatBtn").onclick=clearActiveThread;
   $("readingToggle").onclick=async()=>{ S.reading=!S.reading; save(); updateReadingToggle();
     renderThread(S.messages,$("chatScroll"),$("chatEmpty"));
-    if(S.reading){ toast("連讀標註中…"); await annotateLatest(); } };
+    if(S.reading){ toast("連讀標註中…"); const ok=await annotateLatest(); if(!ok) toast("連讀標註失敗了,細節看 Console(F12)"); } };
   $("capExport").onclick=exportActiveThread; $("reviewBtn").onclick=startReviewScene;
   $("skySearch").oninput=e=>{ skyFilter=e.target.value; renderSky(); };
   $("skySortBtn").onclick=()=>{ skySort = skySort==="alpha" ? "recent" : "alpha"; renderSky(); };
