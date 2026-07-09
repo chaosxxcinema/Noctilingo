@@ -223,7 +223,7 @@
 <div id="splash">
   <div class="lg">Nocti<span class="m">lingo</span></div>
   <div class="tag">Core · 開放的靈魂內核</div>
-  <div class="v">v1.9.1</div>
+  <div class="v">v1.9.3</div>
 </div>
 
 <header>
@@ -437,6 +437,10 @@
       <input class="inp" id="nativeLang" placeholder="預設 繁體中文">
       <label class="fld">正在學</label>
       <input class="inp" id="targetLang" placeholder="預設 美式英語">
+      <label class="fld">朗讀聲音</label>
+      <select class="inp" id="voiceSelect"></select>
+      <button class="pill" id="voicePreview" style="margin-top:8px">🔊 試聽</button>
+      <div class="hint" style="margin-top:6px">這台裝置有什麼聲音可選，就會列在這裡；不同裝置清單不一樣，換裝置需要重選。選好之後立即生效，不用按下面的確定。</div>
       <div class="btnrow">
         <button class="cc" id="cancelUser">取消</button>
         <button class="ok" id="confirmUser">確定</button>
@@ -933,7 +937,7 @@ const ENGINE_NOTES = {
 
 let S = {
   theme:"light",
-  settings:{ provider:"claude", keys:{gemini:"",claude:"",gpt:""}, models:{...DEFAULT_MODELS} },
+  settings:{ provider:"claude", keys:{gemini:"",claude:"",gpt:""}, models:{...DEFAULT_MODELS}, voiceName:"" },
   profile:{ userName:"", nativeLang:"繁體中文", targetLang:"美式英語" },
   souls: SAMPLE_SOULS.map(s=>({...s})),
   activeSoulId: SAMPLE_SOULS[0].id,
@@ -952,7 +956,7 @@ function load(){
   try{
     const raw=localStorage.getItem(STORE_KEY);
     if(raw){ const s=JSON.parse(raw); S=Object.assign(S,s);
-      S.settings=Object.assign({provider:"claude",keys:{},models:{}},s.settings||{});
+      S.settings=Object.assign({provider:"claude",keys:{},models:{},voiceName:""},s.settings||{});
       S.settings.keys=Object.assign({gemini:"",claude:"",gpt:""},S.settings.keys||{});
       S.settings.models=Object.assign({...DEFAULT_MODELS},S.settings.models||{});
       S.profile=Object.assign({userName:"",nativeLang:"繁體中文",targetLang:"美式英語"},s.profile||{});
@@ -1523,7 +1527,7 @@ function setPanel(name){
   document.querySelectorAll(".setpanel").forEach(p=>p.style.display="none");
   if(name==="engine"){ provTab=S.settings.provider; renderProvTabs(); renderProvFields(); $("panelEngine").style.display="block"; $("setTitle").textContent="🔌 引擎與金鑰"; }
   else if(name==="soul"){ renderSoulList(); $("soulEditor").style.display="none"; editingSoulId=null; $("panelSoul").style.display="block"; $("setTitle").textContent="🌙 靈魂角色"; }
-  else if(name==="user"){ $("userName").value=S.profile.userName||""; $("nativeLang").value=S.profile.nativeLang||""; $("targetLang").value=S.profile.targetLang||""; $("panelUser").style.display="block"; $("setTitle").textContent="🙋 用戶設定"; }
+  else if(name==="user"){ $("userName").value=S.profile.userName||""; $("nativeLang").value=S.profile.nativeLang||""; $("targetLang").value=S.profile.targetLang||""; renderVoiceOptions(); $("panelUser").style.display="block"; $("setTitle").textContent="🙋 用戶設定"; }
   else if(name==="privacy"){ $("panelPrivacy").style.display="block"; $("setTitle").textContent="🔒 隱私與免責"; }
 }
 function confirmEngine(){ stashProvField(); S.settings.provider=provTab; save(); checkReady(); toast("金鑰存好了 ✨"); setBackToMenu(); triggerWake(); }
@@ -1661,11 +1665,29 @@ function stripForSpeech(s){
 // ── 選對的語音引擎(依語系挑 voice,而非交給瀏覽器亂猜)──
 let cachedVoices=[];
 function loadVoices(){ try{ cachedVoices=window.speechSynthesis?window.speechSynthesis.getVoices():[]; }catch(e){ cachedVoices=[]; } }
-if(window.speechSynthesis){ loadVoices(); window.speechSynthesis.onvoiceschanged=loadVoices; }
+if(window.speechSynthesis){ loadVoices(); window.speechSynthesis.onvoiceschanged=()=>{ loadVoices(); if($("panelUser")&&$("panelUser").style.display==="block") renderVoiceOptions(); }; }
+function renderVoiceOptions(){
+  const sel=$("voiceSelect"); if(!sel) return;
+  if(!cachedVoices.length) loadVoices();
+  if(!cachedVoices.length){ sel.innerHTML=`<option value="">（這台裝置還沒回報可用語音，稍後再開一次設定看看）</option>`; return; }
+  const targetPrefix=targetLangCode().split("-")[0];
+  const matched=cachedVoices.filter(v=>v.lang&&v.lang.split("-")[0]===targetPrefix);
+  const others=cachedVoices.filter(v=>!(v.lang&&v.lang.split("-")[0]===targetPrefix));
+  const opt=v=>`<option value="${escapeHtml(v.name)}"${S.settings.voiceName===v.name?' selected':''}>${escapeHtml(v.name)}${v.lang?` (${v.lang})`:""}</option>`;
+  sel.innerHTML = `<option value=""${S.settings.voiceName?"":" selected"}>🔄 自動選擇（建議先試試看）</option>`+
+    (matched.length?`<optgroup label="貼合「${escapeHtml(S.profile.targetLang||"")}」的聲音">${matched.map(opt).join("")}</optgroup>`:"")+
+    (others.length?`<optgroup label="其他聲音">${others.map(opt).join("")}</optgroup>`:"");
+}
 function setSpeechVoice(u){
   if(!cachedVoices.length) loadVoices();
   if(!cachedVoices.length) return;
   const lang=u.lang||"en-US";
+  const chosenName=S.settings.voiceName;
+  if(chosenName){
+    const chosen=cachedVoices.find(v=>v.name===chosenName);
+    if(chosen){ u.voice=chosen; return; }
+    // 選過的聲音在這台裝置上找不到(可能換裝置了)→ 安靜退回自動選,不報錯
+  }
   const v=cachedVoices.find(v=>v.lang===lang) || cachedVoices.find(v=>v.lang&&v.lang.split("-")[0]===lang.split("-")[0]);
   if(v) u.voice=v;
 }
@@ -1920,6 +1942,11 @@ document.querySelectorAll(".sheet").forEach(sh=>{ if(sh.classList.contains("nodi
   document.querySelectorAll("[data-back]").forEach(b=>b.onclick=setBackToMenu);
   $("confirmEngine").onclick=confirmEngine; $("cancelEngine").onclick=cancelEngine;
   $("confirmUser").onclick=confirmUser; $("cancelUser").onclick=cancelUser;
+  $("voiceSelect").onchange=e=>{ S.settings.voiceName=e.target.value; save(); };
+  $("voicePreview").onclick=()=>{
+    const samples={"en-US":"Hi there, this is what this voice sounds like.","ja-JP":"こんにちは、これがこの声です。","zh-CN":"你好，這是這個聲音的樣子。","ko-KR":"안녕하세요, 이 목소리입니다.","fr-FR":"Bonjour, voici à quoi ressemble cette voix.","es-ES":"Hola, así suena esta voz.","de-DE":"Hallo, so klingt diese Stimme.","it-IT":"Ciao, questo è il suono di questa voce."};
+    speak(samples[targetLangCode()]||samples["en-US"]);
+  };
   $("newSoulBtn").onclick=newSoul; $("saveSoul").onclick=saveSoul; $("cancelSoul").onclick=cancelSoul; $("delSoul").onclick=delSoul; $("expandSoul").onclick=expandSoul;
   $("nightBtn").onclick=()=>{ if(!S.cards.length){toast("先聊出幾顆星，再過夜～");return;} passNight(); toast("過了一夜 🌙"); };
   $("resetBtn").onclick=()=>{ askConfirm("把整片記憶迴廊清空、重新開始？所有星星都會消失（對話也一起清）。",()=>{
