@@ -223,7 +223,7 @@
 <div id="splash">
   <div class="lg">Nocti<span class="m">lingo</span></div>
   <div class="tag">Core · 開放的靈魂內核</div>
-  <div class="v">v1.8</div>
+  <div class="v">v1.9.1</div>
 </div>
 
 <header>
@@ -690,7 +690,7 @@ function buildSystem(isWake){
     lvUnknown
       ? `對方程度【還沒估出來】：先當初學者對待，${p.targetLang}輸出【一句話、大約 5–8 個字/單詞】就好，九成對方聽得懂，一句頂多藏 1 個對方搆得到的新字。等聊開了、程度明朗了，下面這條分級規則才會生效。`
       : `對方目前程度估計：${S.level.cefr}（${S.level.note}）。${p.targetLang}輸出長度要【跟著熟練度分級走】，程度是這份估計裡「最初階」的那一階（如 CEFR A1、JLPT N5、HSK 1 這類）→ 一句短話，約 5–8 個字/單詞；「初階偏上」（A2、N4、HSK 2）→ 一到兩句，每句約 8–12 個字/單詞；「中階」（B1、N3、HSK 3–4）→ 兩句上下，可以有一點從屬子句；「中高階」（B2、N2、HSK 5）→ 兩到三句，語氣可以更自然口語；「高階／接近母語」（C1、C2、N1、HSK 6）→ 可以講得跟母語者一樣自然，不用刻意精簡。九成對方聽得懂、一句頂多藏 1 個對方搆得到的新字，不管哪一階都適用。`,
-    "── 長度硬上限（不管程度多高、不管你這個角色平常話多不多，都要遵守，沒有例外）：reply_target 單輪【不超過約 40 個英文單詞／70 個中文字】（其他語言抓類似的量感）。想多說？把話題留到下一輪的鉤子裡，靠對話的『來回』累積份量，不要靠『一輪講很多』。這條規則的存在，是為了讓對方讀得完、也讓連讀標註等後續功能正常運作，比你這個角色的說話習慣更優先。",
+    "── 長度硬上限（不管程度多高、不管你這個角色平常話多不多，都要遵守，沒有例外）：reply_target 單輪【不超過約 40 個英文單詞／70 個中文字】（其他語言抓類似的量感）。想多說？把話題留到下一輪的鉤子裡，靠對話的『來回』累積份量，不要靠『一輪講很多』。這條規則的存在，是為了貼合對方的學習節奏、讓對方讀得完消化得了，比你這個角色的說話習慣更優先。",
     `可母語＋${p.targetLang}混說、${p.targetLang}是主角——但要用「你這個角色會說的話」，不是教科書腔。`,
     resurface.length?`自然地、像聊天一樣重新用到這些對方正在學的字（別硬塞、別像考試）：${resurface.join("、")}`:"",
     weak.length?`對方常犯的弱點：${weak.join("；")}。別一直紅筆——在你自己的話裡自然多示範幾次正確用法就好（潤物細無聲）。`:"",
@@ -704,7 +704,8 @@ function buildSystem(isWake){
     "",
     "── 只回傳 JSON，不要前後文、不要 ```：",
     `{"reply_support":"（可選）你用人設語氣、以對方的母語(${p.nativeLang})說的話，溫暖/吐槽/陪伴，可空","reply_target":"你角色腔調的 ${p.targetLang}，短、貼程度、帶標點、結尾常帶鉤子帶對方繼續","correction":null 或 {"original":"對方說的","fixed":"正確版","note":"你角色口氣順口提點一句"},"captured":[{"term":"值得記的字","reason":"asked|struggled|reach|life","context":"當時句子","gloss":"用對方母語的意思"}],"grammar":[{"pattern":"簡短固定的分類詞","example":"對方的原句"}],"level":{"cefr":"程度標記","note":"一句話依據"}}`,
-    `reply_target 一定要帶正常標點。【欄位鐵則】reply_target 只放你的目標語「對話台詞」本身，短（1–3 句）：絕不混入母語、絕不放解說/翻譯/小教學、絕不放 --- 分隔線或旁白括號——那些全部放 reply_support。兩欄各司其職，互不滲透。captured 最多 2 個。grammar.pattern 用『簡短固定』的分類詞、依 ${p.targetLang} 自己的文法概念分類（例如英語會有「漏冠詞/時態/be動詞」，其他語言用其各自的概念），同一類錯用同一個詞、別每次換句話描述，方便長期累積。level.cefr 用 ${p.targetLang} 慣用的程度尺（英語＝CEFR A1~C2，其他語言用其對應尺如 JLPT/HSK）。整份 JSON 短、合法、收尾完整。`,
+    `── 【欄位鐵則,獨立強調】reply_target 這一欄【只能是純粹的 ${p.targetLang}】，一個中文字/母語字都不准出現在裡面——連一句吐槽、一個語氣詞開場白都不行。你這個角色如果想用母語吐槽、旁白、或講「乖」「小東西」這種口頭禪，那些字全部要放進 reply_support，不是 reply_target。錯誤示範（絕對不要這樣）："reply_target":"哦？乖，Can you tell me more?" 正確示範："reply_support":"哦？乖～","reply_target":"Can you tell me more?"。這條規則比你的角色語氣更優先，沒有例外。`,
+    `reply_target 一定要帶正常標點。reply_target 短（1–3 句）：絕不放解說/翻譯/小教學、絕不放 --- 分隔線或旁白括號——那些全部放 reply_support。captured 最多 2 個。grammar.pattern 用『簡短固定』的分類詞、依 ${p.targetLang} 自己的文法概念分類（例如英語會有「漏冠詞/時態/be動詞」，其他語言用其各自的概念），同一類錯用同一個詞、別每次換句話描述，方便長期累積。level.cefr 用 ${p.targetLang} 慣用的程度尺（英語＝CEFR A1~C2，其他語言用其對應尺如 JLPT/HSK）。整份 JSON 短、合法、收尾完整。`,
     jsonNote(),
   ].filter(Boolean).join("\n");
 }
@@ -1165,6 +1166,24 @@ function passNight(){
   S.recap={night:S.nights,familiar:fam,faded,review}; save(); renderSky();
 }
 
+// 防禦網:就算模型沒守住欄位鐵則,把中文塞進 en 開頭,這裡自動搬回 cn 去
+// 做法:找「最後一個中文字元」在哪,不去猜中間夾的是什麼標點(破折號/刪節號/引號都不用列清單),
+// 只要那之後剩下的是乾淨的目標語文字,就把中文段落整段搬去 cn。
+function splitLeadingCJK(cn, en){
+  const s = String(en||"");
+  if(!/[\u4e00-\u9fff]/.test(s)) return { cn, en }; // 沒中文,不用處理
+  let lastCJK = -1;
+  for(let i=0;i<s.length;i++){ const c=s.charCodeAt(i); if(c>=0x4e00&&c<=0x9fff) lastCJK=i; }
+  if(lastCJK<0) return { cn, en };
+  // 從最後一個中文字之後,把標點/空白(不管中文西文標點)都掃進中文段,直到第一個西文字母才是英文真正開始
+  let cut = lastCJK+1;
+  while(cut<s.length && !/[A-Za-z]/.test(s[cut])) cut++;
+  const prefix = s.slice(0, cut).trim();
+  const rest = s.slice(cut).trim();
+  if(!rest || !/[A-Za-z]/.test(rest)) return { cn, en }; // 後面沒剩下像樣的目標語文字,交給上層閘門擋
+  return { cn: (cn?cn+" ":"")+prefix, en: rest };
+}
+
 // ── 送出一輪（通用）──
 async function sendTurn(threadName, text, systemStr, histN, sysFlag){
   const arr=S[threadName];
@@ -1175,7 +1194,8 @@ loading=true; rerender(threadName); updateSendBtn();
     const history=sanitizeHistory(rawHistory);
     const raw=await callModel(systemStr,history,1000);
     const p=parseReply(raw); if(!p) throw new Error("大腦有回話，但格式看不懂（解析失敗）");
-    arr.push({role:"assistant",cn:stripMd(p.reply_support||p.reply_cn||""),en:stripMd(p.reply_target||p.reply_en||""),correction:p.correction||null});
+    const fixed=splitLeadingCJK(stripMd(p.reply_support||p.reply_cn||""),stripMd(p.reply_target||p.reply_en||""));
+    arr.push({role:"assistant",cn:fixed.cn,en:fixed.en,correction:p.correction||null});
     ingest(p.captured,p.grammar,text);
     if(p.level&&p.level.cefr) S.level={cefr:p.level.cefr,note:p.level.note||""};
   }catch(e){ arr.push({role:"assistant",cn:"（訊號被夜色吞了一下……）",en:"",err:friendlyErr(String((e&&e.message)||e))}); }
@@ -1347,13 +1367,13 @@ function renderReading(reading,text){
 async function fetchReading(text){
   if(!String(text||"").trim()) return null;
   const _t=String(text||"").trim();
-  if(_t.length>450 || /[\u4e00-\u9fff]/.test(_t)) { console.warn("[連讀標註] 跳過:文本過長或含中文",_t.length); return null; }
+  if(_t.length>1000 || /[\u4e00-\u9fff]/.test(_t)) { console.warn("[連讀標註] 跳過:文本過長或含中文",_t.length); return null; }
   try{
     if(typeof buildAnnotatorSystem!=="function") { console.warn("[連讀標註] buildAnnotatorSystem 不存在,prompts.js 可能沒載入"); return null; }
     const sys=buildAnnotatorSystem();
-    const raw=await callModel(sys,[{role:"user",content:String(text)}],1800);
+    const raw=await callModel(sys,[{role:"user",content:String(text)}],4096);
     const m=String(raw||"").replace(/```json/gi,"").replace(/```/g,"").match(/\{[\s\S]*\}/);
-    if(!m) { console.warn("[連讀標註] 模型回傳裡找不到 JSON,原始回應:",raw); return null; }
+    if(!m) { console.warn("[連讀標註] 模型回傳裡找不到 JSON | raw是否為空:",!raw,"| 長度:",(raw||"").length,"| provider:",S.settings.provider,"| model:",S.settings.models[S.settings.provider]||DEFAULT_MODELS[S.settings.provider],"| 完整內容:",JSON.stringify(raw)); return null; }
     let j=null; try{ j=JSON.parse(m[0]); }catch(_){ try{ j=JSON.parse(m[0].replace(/,\s*([}\]])/g,"$1")); }catch(__){ console.warn("[連讀標註] JSON 解析失敗:",m[0]); return null; } }
     if(!(j&&Array.isArray(j.words)&&j.words.length)) { console.warn("[連讀標註] 解析出來但 words 是空的或格式不對:",j); return null; }
     return {words:j.words};
