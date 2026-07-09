@@ -1,0 +1,1927 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0E0B1A" />
+<title>Noctilingo</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="./icons/icon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Noctilingo">
+<style>
+  :root{
+    --night:#0E0B1A; --panel:#171130; --raised:#211A42; --edge:#2E2658;
+    --star:#F5C84B; --moon:#A99BF0; --dim:#6B5FA8; --text:#ECE7FF; --mute:#9A93C2;
+    --user:#2A2150; --good:#7BE0B0; --warn:#F2A4C0; --soft:#F0A350;
+    --sans:"Noto Sans TC","PingFang TC",system-ui,sans-serif;
+    --serif:"Noto Serif TC","Songti SC",Georgia,serif;
+  }
+  [data-theme="light"]{
+    --night:#F6F1E6; --panel:#FBF7EF; --raised:#FFFDF8; --edge:#E6DCC8;
+    --star:#B8841A; --moon:#5B4FC4; --dim:#9D93BE; --text:#2C2647; --mute:#7A7290;
+    --user:#E9E2F5; --good:#1E9E6A; --warn:#C2557E; --soft:#C26A1E;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--night);color:var(--text);font-family:var(--sans);
+    display:flex;flex-direction:column;height:100dvh;overflow:hidden;transition:background .3s,color .3s;}
+  button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit;}
+  input,textarea,select{font-family:var(--sans);color:var(--text);}
+  .pill{border:1px solid var(--edge);background:var(--raised);color:var(--mute);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;}
+  .pill.on{background:var(--star);color:var(--night);border-color:var(--star);}
+
+  header{display:flex;align-items:center;gap:5px;padding:9px 11px;padding-top:max(9px,env(safe-area-inset-top));
+    border-bottom:1px solid var(--edge);background:var(--panel);}
+  .brand{font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:.3px;flex-shrink:0;}
+  .brand .moon{color:var(--moon);}
+  .ver{font-size:9px;color:var(--mute);font-weight:600;flex-shrink:0;margin-left:-2px;}
+  .soulchip{display:flex;align-items:center;gap:4px;border:1px solid var(--edge);background:var(--raised);
+    border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;color:var(--star);max-width:104px;white-space:nowrap;overflow:hidden;flex-shrink:1;}
+  .soulchip #soulName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .spacer{flex:1;}
+  .iconbtn{width:30px;height:30px;border-radius:9px;border:1px solid var(--edge);background:var(--raised);
+    display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;padding:0;}
+  .iconbtn.on{background:var(--star);border-color:var(--star);color:var(--night);}
+
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .view{display:none;min-height:100%;}
+  .view.active{display:block;}
+
+  .scroll{padding:16px 14px 20px;display:flex;flex-direction:column;gap:14px;}
+  .row{display:flex;}
+  .row.me{justify-content:flex-end;}
+  .bubble{max-width:82%;border-radius:16px;padding:10px 13px;line-height:1.7;font-size:15px;}
+  .bubble.them{background:var(--panel);border:1px solid var(--edge);border-bottom-left-radius:5px;}
+  .bubble.me{background:var(--user);border-bottom-right-radius:5px;}
+  .en{margin-top:6px;font-size:15.5px;line-height:1.8;}
+  .en .w{cursor:pointer;border-radius:4px;padding:0 1px;}
+  .en .w:active{background:rgba(245,200,75,.28);}
+  .corr{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(242,164,192,.10);
+    border:1px solid rgba(242,164,192,.35);font-size:13px;}
+  .corr b{color:var(--warn);}
+  .speak{margin-top:7px;font-size:12px;color:var(--moon);font-weight:700;display:inline-flex;gap:4px;align-items:center;}
+  .err{margin-top:6px;font-size:12px;color:var(--warn);}
+  .empty{padding:40px 26px;text-align:center;color:var(--mute);font-size:14px;line-height:2;}
+  .typing{display:inline-flex;gap:4px;}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--moon);animation:bob 1s infinite;}
+  .typing i:nth-child(2){animation-delay:.15s;}.typing i:nth-child(3){animation-delay:.3s;}
+  @keyframes bob{0%,100%{opacity:.3;transform:translateY(0);}50%{opacity:1;transform:translateY(-3px);}}
+
+  .composer{display:flex;gap:8px;padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));
+    border-top:1px solid var(--edge);background:var(--panel);}
+  .composer textarea{flex:1;resize:none;border:1px solid var(--edge);background:var(--raised);
+    border-radius:14px;padding:10px 12px;font-size:15px;max-height:120px;min-height:44px;line-height:1.5;}
+  .send{width:44px;height:44px;border-radius:14px;background:var(--star);color:var(--night);
+    font-size:18px;font-weight:800;flex:none;display:flex;align-items:center;justify-content:center;}
+  .send:disabled{opacity:.45;}
+
+  /* 能力頁 */
+  .ability-pad{padding:16px 14px 24px;}
+  .ttl{font-family:var(--serif);font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .sub{color:var(--mute);font-size:12.5px;margin:4px 0 14px;line-height:1.6;}
+  .modcard{border:1px solid var(--edge);background:var(--panel);border-radius:16px;padding:15px;margin-bottom:13px;}
+  .modcard h3{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:7px;}
+  .modcard p{margin:0 0 12px;font-size:13px;color:var(--mute);line-height:1.7;}
+  .modcard .go{background:var(--star);color:var(--night);border-radius:11px;padding:9px 18px;font-weight:800;font-size:14px;}
+  .modcard textarea{width:100%;border:1px solid var(--edge);background:var(--raised);border-radius:11px;
+    padding:10px 12px;font-size:14px;min-height:64px;resize:vertical;margin-bottom:9px;line-height:1.6;}
+  .modrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .modhead{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .modhead h3{margin:0 0 4px;}
+  /* 模組滑動開關(v1.5)：軌道用 --edge 貼雙主題,開啟亮 --star */
+  .modtog{min-width:46px;width:46px;height:26px;border-radius:13px;border:1px solid var(--edge);
+    background:var(--edge);position:relative;cursor:pointer;font-size:0;padding:0;flex-shrink:0;
+    transition:background .25s ease,border-color .25s ease;}
+  .modtog::after{content:"";position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.28);transition:left .25s cubic-bezier(.4,1.6,.6,1),width .15s;}
+  .modtog.on{background:var(--star);border-color:var(--star);}
+  .modtog.on::after{left:22px;}
+  .modtog:active::after{width:23px;}
+  .modcard.off{opacity:.62;}
+  .modcard.off .modbody{display:none;}
+  .modcard.off .modtog{border-color:var(--edge);}
+  /* 複習卷:選中的選項 */
+  .quizopt.on{outline:2px solid var(--star);}
+  /* 複習卷:批改後紅綠(v1.6) */
+  .modcard.quizok{border-color:var(--good);}
+  .modcard.quizbad{border-color:var(--warn);}
+  .quizopt.good{outline:2px solid var(--good);color:var(--good);font-weight:800;}
+  .quizopt.bad{outline:2px solid var(--warn);color:var(--warn);}
+  .quizopt:disabled{cursor:default;}
+  .modcard.addmod{border-style:dashed;}
+  .pill.soon{background:var(--raised);color:var(--mute);border:1px solid var(--edge);font-size:11px;padding:3px 10px;border-radius:999px;flex-shrink:0;}
+  .ghost-go{background:transparent;border:1px solid var(--star);color:var(--star);}
+  .en .w.reading{background:var(--star);color:var(--night);border-radius:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone;}
+  .en .w.s-strong{font-weight:800;}
+  .en .w.s-weak{color:var(--mute);}
+  .en .w.s-spoken{color:var(--soft);font-weight:600;}
+  .en .liaison{color:var(--star);font-weight:800;margin:0 1px;}
+  .backbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--edge);background:var(--panel);}
+  .backbar .nm{font-weight:700;color:var(--star);}
+
+  /* 記憶 */
+  .sky{background:radial-gradient(120% 100% at 50% 0%, rgba(169,155,240,.10), transparent 70%);
+    border:1px solid var(--edge);border-radius:16px;padding:12px;min-height:120px;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;}
+  .star{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:5px;padding:5px 9px;border-radius:999px;border:1px solid var(--edge);
+    background:var(--raised);max-width:100%;font-size:13px;line-height:1.3;position:relative;padding-right:24px;}
+  .star .t{font-weight:700;white-space:nowrap;}
+  .star .g{color:var(--mute);font-size:11px;max-width:30vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .star .bar{width:100%;height:3px;background:var(--edge);border-radius:2px;overflow:hidden;flex-basis:100%;margin-top:2px;}
+  .star .bar i{display:block;height:100%;border-radius:2px;transition:width .3s;}
+  .star .stardel{position:absolute;right:4px;top:4px;width:16px;height:16px;border-radius:50%;font-size:10px;line-height:1;
+    color:var(--mute);opacity:.5;display:flex;align-items:center;justify-content:center;}
+  .star .stardel:hover{opacity:1;color:var(--warn);background:rgba(242,164,192,.15);}
+  .galempty{color:var(--mute);font-size:13.5px;text-align:center;padding:24px;line-height:2;width:100%;}
+  .skybar{display:flex;align-items:center;gap:8px;margin:4px 0 10px;flex-wrap:wrap;}
+  .skybar input{flex:1;min-width:120px;border:1px solid var(--edge);background:var(--raised);border-radius:10px;padding:7px 11px;font-size:13px;}
+  .cnt{font-size:12px;color:var(--mute);font-weight:700;}
+  .weak{display:inline-block;margin:4px 6px 0 0;padding:4px 10px;border-radius:999px;background:rgba(242,164,192,.12);border:1px solid rgba(242,164,192,.4);font-size:12px;color:var(--warn);}
+  .nightbtn{margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  /* 對話工具列 */
+  .chatbar{display:flex;gap:8px;padding:8px 14px 0;flex-wrap:wrap;}
+  .tbtn{font-size:12.5px;font-weight:700;color:var(--mute);border:1px solid var(--edge);background:var(--raised);border-radius:999px;padding:5px 12px;}
+  .tbtn.on{background:var(--moon);color:#fff;border-color:var(--moon);}
+  /* 高亮：朗讀中的詞 */
+  .en .spk{background:var(--star);color:var(--night);border-radius:3px;}
+  .recap{margin-top:14px;padding:13px 15px;border-radius:14px;background:var(--panel);border:1px solid var(--edge);font-size:13.5px;line-height:1.9;}
+
+  /* sheet */
+  .sheet{position:fixed;inset:0;background:rgba(8,6,18,.55);backdrop-filter:blur(3px);display:none;align-items:flex-end;z-index:40;}
+  .sheet.open{display:flex;}
+  .sheetcard{background:var(--panel);width:100%;max-height:90dvh;overflow-y:auto;border-radius:20px 20px 0 0;
+    border-top:1px solid var(--edge);padding:18px 16px;padding-bottom:max(18px,env(safe-area-inset-bottom));}
+  @media(min-width:560px){.sheet{align-items:center;}.sheetcard{max-width:480px;margin:auto;border-radius:20px;border:1px solid var(--edge);}}
+  .sh-h{display:flex;align-items:center;margin-bottom:6px;}
+  .sh-h b{font-family:var(--serif);font-size:18px;}
+  .sh-h .x{margin-left:auto;font-size:20px;width:34px;height:34px;border-radius:10px;background:var(--raised);border:1px solid var(--edge);}
+  .secttl{font-size:12px;font-weight:800;color:var(--moon);letter-spacing:1px;margin:20px 0 8px;text-transform:uppercase;}
+  label.fld{display:block;margin:12px 0 5px;font-size:12.5px;font-weight:700;color:var(--mute);}
+  .inp,textarea.inp{width:100%;border:1px solid var(--edge);background:var(--raised);border-radius:11px;padding:10px 12px;font-size:14px;}
+  textarea.inp{resize:vertical;min-height:96px;line-height:1.6;}
+  .tabs{display:flex;gap:6px;}
+  .tabs button{flex:1;border:1px solid var(--edge);background:var(--raised);border-radius:11px;padding:10px 6px;font-size:13.5px;font-weight:700;color:var(--mute);}
+  .tabs button.on{background:var(--moon);color:#fff;border-color:var(--moon);}
+  .save{margin-top:16px;width:100%;background:var(--star);color:var(--night);border-radius:12px;padding:12px;font-weight:800;font-size:15px;}
+  .ghost{background:var(--raised);border:1px solid var(--edge);color:var(--text);border-radius:11px;padding:10px;font-weight:700;font-size:13.5px;}
+  .hint{font-size:11.5px;color:var(--mute);line-height:1.7;margin-top:6px;}
+  .danger{color:var(--warn);}
+  .soulrow{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;border:1px solid var(--edge);background:var(--raised);margin-top:8px;}
+  .soulrow .nm{font-weight:700;flex:1;}
+  .soulrow.active{border-color:var(--star);}
+  .menurow{display:flex;align-items:center;gap:12px;padding:14px 13px;border:1px solid var(--edge);background:var(--raised);border-radius:13px;margin-top:10px;cursor:pointer;}
+  .menurow>span:first-child{font-size:20px;}
+  .menurow .mt{flex:1;}
+  .menurow .mt b{display:block;font-size:15px;}
+  .menurow .mt small{color:var(--mute);font-size:12px;}
+  .menurow .chev{color:var(--mute);font-size:20px;}
+  .rowbtn{display:block;width:100%;text-align:left;padding:14px 15px;border:1px solid var(--edge);background:var(--raised);border-radius:13px;margin-top:10px;font-size:15px;font-weight:600;cursor:pointer;color:var(--text);}
+  .rowbtn:active{background:var(--panel);}
+  .backlink{font-size:13.5px;font-weight:700;color:var(--moon);padding:4px 0;margin-bottom:6px;}
+  .btnrow{display:flex;gap:10px;margin-top:16px;}
+  .btnrow button{flex:1;border-radius:12px;padding:12px;font-weight:800;font-size:15px;}
+  .btnrow .ok{background:var(--star);color:var(--night);}
+  .btnrow .cc{background:var(--raised);border:1px solid var(--edge);color:var(--text);}
+
+  nav{display:flex;border-top:1px solid var(--edge);background:var(--panel);padding-bottom:env(safe-area-inset-bottom);}
+  nav button{flex:1;padding:9px 0 8px;font-size:11px;font-weight:700;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:3px;}
+  nav button .ic{font-size:19px;}
+  nav button.on{color:var(--star);}
+
+  #pop{position:fixed;z-index:50;max-width:240px;background:var(--panel);border:1px solid var(--edge);border-radius:13px;padding:11px 13px;box-shadow:0 12px 34px rgba(0,0,0,.4);display:none;}
+  #pop .pw{font-weight:800;font-size:15px;border-radius:5px;cursor:text;}
+  #pop .pg{margin-top:5px;font-size:13px;line-height:1.6;border-radius:5px;cursor:text;}
+  #pop .pw:focus,#pop .pg:focus{outline:1px dashed var(--star);outline-offset:2px;}
+  #pop .pa{margin-top:9px;display:flex;gap:8px;}
+  #pop .pa button{font-size:12px;font-weight:700;padding:6px 10px;border-radius:9px;border:1px solid var(--edge);background:var(--raised);}
+  #pop .pa .keep{background:var(--star);color:var(--night);border-color:var(--star);}
+
+  #splash{position:fixed;inset:0;z-index:80;background:var(--night);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;transition:opacity .6s;}
+  #splash .lg{font-family:var(--serif);font-size:34px;font-weight:700;letter-spacing:2px;}
+  #splash .lg .m{color:var(--moon);}
+  #splash .tag{color:var(--mute);font-size:13px;letter-spacing:1px;}
+  #splash .v{color:var(--mute);font-size:11px;opacity:.7;}
+  #splash.gone{opacity:0;pointer-events:none;}
+
+  .toast{position:fixed;left:50%;bottom:calc(148px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(6px);background:var(--raised);border:1px solid var(--edge);
+    padding:13px 20px;border-radius:14px;font-size:15px;font-weight:700;line-height:1.5;z-index:75;opacity:0;
+    max-width:86vw;text-align:center;box-shadow:0 10px 28px rgba(0,0,0,.28);
+    transition:opacity .25s,transform .25s;pointer-events:none;}
+  .toast.inDialog{bottom:auto;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%) translateY(-6px);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .warnbar{margin:12px 14px 0;padding:9px 12px;border-radius:11px;background:rgba(242,164,192,.12);border:1px solid rgba(242,164,192,.4);font-size:12px;line-height:1.6;display:none;}
+  .warnbar.show{display:block;}
+
+</style>
+</head>
+<body data-theme="light">
+
+<div id="splash">
+  <div class="lg">Nocti<span class="m">lingo</span></div>
+  <div class="tag">Core · 開放的靈魂內核</div>
+  <div class="v">v1.8</div>
+</div>
+
+<header>
+  <div class="brand">Nocti<span class="moon">lingo</span></div>
+  <span class="ver">v1.8</span>
+  <button class="soulchip" id="soulChip" title="切換靈魂">🌙 <span id="soulName">—</span> ▾</button>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="exportBtn" title="匯出對話">⬇</button>
+  <button class="iconbtn" id="clearChatBtn" title="清空對話">🧹</button>
+  <button class="iconbtn" id="readingToggle" title="連讀標註">🔗</button>
+  <button class="iconbtn" id="setBtn" title="設定">⚙️</button>
+</header>
+
+<main>
+  <!-- 對話 -->
+  <section class="view active" id="vChat">
+    <div class="warnbar" id="warnbar"></div>
+    <div class="scroll" id="chatScroll">
+      <div class="empty" id="chatEmpty">
+        夜幕剛落下。<br>跟你的夥伴說說今天吧——哪種語言都行，<br>你用到的字會變成這片記憶裡的星。 🌟
+      </div>
+    </div>
+  </section>
+
+  <!-- 能力 -->
+  <section class="view" id="vAbility">
+    <!-- 模組選單 -->
+    <div class="ability-pad" id="abMenu">
+      <div class="ttl">🧩 能力模組</div>
+      <div class="sub">核心只有靈魂＋記憶；其餘能力要才裝。所有模組都由靈魂來使用、都寫回同一片記憶迴廊。不常用的可以關掉。</div>
+      <div class="modcard" id="modRead">
+        <div class="modhead"><h3>📖 精讀</h3><button class="modtog" data-mod="read">啟用中</button></div>
+        <div class="modbody">
+          <p>遇到看不懂的長句、術語？貼進來，夥伴會用你的程度帶你：先抓意義 → 圈骨架詞 → 講語感（不抠術語）→ 階梯造句。拆過的字都收進記憶。</p>
+          <textarea id="readInput" placeholder="貼一句想精讀的句子…"></textarea>
+          <div class="modrow">
+            <button class="go" id="readGo">🔍 帶我精讀</button>
+            <button class="pill" id="readGen">✨ 生成範例句</button>
+          </div>
+        </div>
+      </div>
+      <div class="modcard" id="modScene">
+        <div class="modhead"><h3>🎭 場景模擬</h3><button class="modtog" data-mod="scene">啟用中</button></div>
+        <div class="modbody">
+          <p>想演一段情境？你出場景、定角色、給個小目標，夥伴就入戲陪你演，卡住隨時喊「暫停」跳出來問。</p>
+          <div class="modrow">
+            <button class="go" id="sceneGo">🎬 我來出場景</button>
+            <button class="pill" id="reviewBtn">🔁 用該複習的字織一場</button>
+          </div>
+        </div>
+      </div>
+      <div class="modcard" id="modQuiz">
+        <div class="modhead"><h3>📝 複習題</h3><button class="modtog" data-mod="quiz">啟用中</button></div>
+        <div class="modbody">
+          <p>迴廊裡到期該複習的星星，夥伴會挑出來出一份小卷（選擇＋填空，最多 12 題），當場批改、成績直接寫回記憶重新排程，做完還有夥伴講評。</p>
+          <div class="modrow">
+            <button class="go" id="quizGo">📝 出一份複習卷</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 精讀 / 場景 對話 -->
+    <div id="capThread" style="display:none;flex-direction:column;height:100%;">
+      <div class="backbar">
+        <button class="iconbtn" id="capBack">←</button>
+        <span class="nm" id="capName"></span>
+        <div class="spacer"></div>
+        <button class="pill" id="capExport">⬇</button>
+        <button class="pill" id="capRestart">重來</button>
+      </div>
+      <div class="scroll" id="capScroll" style="flex:1;overflow-y:auto;"></div>
+    </div>
+
+    <!-- 複習卷 -->
+    <div id="quizPane" style="display:none;flex-direction:column;height:100%;">
+      <div class="backbar">
+        <button class="iconbtn" id="quizBack">←</button>
+        <span class="nm">📝 複習卷</span>
+        <div class="spacer"></div>
+        <button class="pill" id="quizSubmit" style="display:none">✅ 交卷</button>
+      </div>
+      <div class="scroll" id="quizScroll" style="flex:1;overflow-y:auto;padding-bottom:24px;"></div>
+    </div>
+  </section>
+
+  <!-- 記憶 -->
+  <section class="view" id="vSky">
+    <div class="ability-pad">
+      <div class="ttl">🌌 記憶迴廊</div>
+      <div class="sub">你用過、問過、卡過的字，都在這裡發光。常用就亮，不用就淡。對話、精讀、場景裡撿到的字都會匯進這裡。</div>
+      <div class="skybar">
+        <span class="cnt" id="skyCount"></span>
+        <input id="skySearch" placeholder="搜尋星星…">
+        <button class="pill" id="skySortBtn">🕐 依最近</button>
+      </div>
+      <div class="sky" id="sky"><div class="galempty">還沒有星星。<br>去跟夥伴聊幾句，記憶就會亮起來。</div></div>
+      <div id="weakWrap"></div>
+      <div class="nightbtn">
+        <button class="pill" id="nightBtn">🌙 模擬過一夜</button>
+      </div>
+      <div id="recap"></div>
+      <div style="margin-top:22px;padding:14px;border:1px dashed var(--edge);border-radius:12px;">
+        <b>💎 記憶結晶</b>
+        <div class="hint" style="margin-top:6px">把整片迴廊（星星、對話、靈魂、程度）打包帶走，或從舊結晶還原。這是你的記憶，換裝置、清快取前先帶上它。</div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="cc" id="crystalImportBtn">📥 匯入結晶</button>
+          <button class="ok" id="crystalExportBtn">💎 匯出結晶</button>
+        </div>
+        <input type="file" id="crystalFile" accept=".json,application/json" style="display:none">
+      </div>
+      <div style="margin-top:22px;">
+        <button class="ghost danger" id="resetBtn" style="width:100%">🗑 清空記憶迴廊（星星全部消失）</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 對話/能力子線 的輸入框 -->
+<div class="composer" id="composer">
+  <textarea id="msgInput" rows="1" placeholder="跟夥伴說點什麼…（哪種語言都行）"></textarea>
+  <button class="send" id="sendBtn">➤</button>
+</div>
+
+<nav>
+  <button class="on" id="navChat">對話</button>
+  <button id="navAbility">能力</button>
+  <button id="navSky">記憶</button>
+</nav>
+
+<!-- 切換靈魂（對話頁，只選不編輯） -->
+<div class="sheet" id="switchSheet">
+  <div class="sheetcard">
+    <div class="sh-h"><b>🌙 切換靈魂</b><button class="x" data-close>×</button></div>
+    <div id="switchList"></div>
+    <div class="hint" style="margin-top:12px">想新建或編輯靈魂？到 <b>⚙️ 設定 → 靈魂角色</b>。</div>
+  </div>
+</div>
+
+<!-- 洞三·首次見面·選魂(強制引導,不可關閉) -->
+<div class="sheet nodismiss" id="onboardSheet" style="z-index:70">
+  <div class="sheetcard">
+    <div class="sh-h"><b>🌙 遇見你的第一個靈魂</b></div>
+    <div id="onboardCards"></div>
+    <div class="hint" id="onboardSubnote" style="margin-top:12px;text-align:center"></div>
+  </div>
+</div>
+<!-- 設定 -->
+<div class="sheet" id="setSheet">
+  <div class="sheetcard">
+    <div class="sh-h"><b id="setTitle">⚙️ 設定</b><button class="x" data-close>×</button></div>
+
+    <!-- 選單 -->
+    <div id="setMenu">
+      <div class="menurow" data-panel="engine"><span>🔌</span><div class="mt"><b>引擎與金鑰</b><small>選引擎、貼 API key</small></div><span class="chev">›</span></div>
+      <div class="menurow" data-panel="soul"><span>🌙</span><div class="mt"><b>靈魂角色</b><small>創建、編輯、貼入 prompt</small></div><span class="chev">›</span></div>
+      <div class="menurow" data-panel="user"><span>🙋</span><div class="mt"><b>用戶設定</b><small>名字、母語、在學的語言</small></div><span class="chev">›</span></div>
+      <div class="menurow" data-panel="privacy"><span>🔒</span><div class="mt"><b>隱私與免責</b><small>資料存在哪、AI 內容怎麼看待</small></div><span class="chev">›</span></div>
+      <div class="menurow" id="themeRow"><span>🎨</span><div class="mt"><b>外觀主題</b><small id="themeState">淺色</small></div><span class="chev">切換</span></div>
+      <div class="hint" id="setVer" style="text-align:center;margin-top:18px;"></div>
+    </div>
+
+    <!-- ① 引擎與金鑰 -->
+    <div id="panelEngine" class="setpanel" style="display:none">
+      <button class="backlink" data-back>← 設定</button>
+      <label class="fld">現在用哪顆引擎？（選哪顆，就貼哪把 key）</label>
+      <div class="tabs" id="provTabs">
+        <button data-prov="gemini">Gemini</button>
+        <button data-prov="claude">Claude</button>
+        <button data-prov="gpt">GPT</button>
+      </div>
+      <div id="provFields"></div>
+      <div class="hint" style="margin-top:8px">🎯 建議用目前較新的版本：<b>Gemini 2.5 Flash／Pro</b>、<b>Claude Sonnet 5</b> 系列（或更高階的 Opus 4.8／Fable 5）、<b>GPT-4o／4.1</b>。太舊或太小的模型角色容易飄、JSON 容易破。上面已列出常見代號可直接選，選不到的用「✏️ 自訂」手動填。<i>（各家版本會更新，這行只是建議、不保證最新。）</i></div>
+      <div class="hint">💡 框架本體不含模型——key 是進雲端模型的門票。純前端直連 <b>Claude 最穩</b>；Gemini／GPT 撞 CORS 連不上是瀏覽器限制、不是 key 貼錯，之後補小代理即可。模型名被拒多半過時，改掉那格就好。</div>
+      <div class="btnrow">
+        <button class="cc" id="cancelEngine">取消</button>
+        <button class="ok" id="confirmEngine">確定</button>
+      </div>
+    </div>
+
+    <!-- ② 靈魂角色 -->
+    <div id="panelSoul" class="setpanel" style="display:none">
+      <button class="backlink" data-back>← 設定</button>
+      <div class="hint" style="margin-top:0">在這裡創建、編輯、貼入靈魂的 prompt 與名字。對話頁只負責「切換」。你的私房魂存在這台裝置，不進程式碼、不上傳。</div>
+      <div id="soulList"></div>
+      <button class="ghost" id="newSoulBtn" style="width:100%;margin-top:10px">＋ 新建一個靈魂</button>
+      <div id="soulEditor" style="display:none;margin-top:14px;border-top:1px dashed var(--edge);padding-top:14px;">
+        <label class="fld">靈魂名字</label>
+        <input class="inp" id="sName" placeholder="例：一個溫柔的家教 / 一個嚴格的老教授">
+        <label class="fld">人格 prompt（靈魂本體）</label>
+        <textarea class="inp" id="sPrompt" placeholder="貼上或寫下這個角色是誰、怎麼說話、怎麼陪你學…"></textarea>
+        <button class="pill" id="expandSoul" style="margin-top:8px">✨ 擴寫成完整角色</button>
+        <div class="hint" style="margin-top:6px">只寫了一句乾巴巴的（例：「一個高冷的貓娘家教」）？按這顆，讓引擎幫你補上說話習慣、語氣、小怪癖，擴寫成有血肉的人設、<b>回填到上面讓你改了再存</b>（不會偷偷覆蓋，你看過才算數）。</div>
+        <label class="fld">語言文化底色（可空）</label>
+        <textarea class="inp" id="sCulture" style="min-height:60px" placeholder="例：美式日常口語、大量俚語、語氣鬆弛…（服從上面的人格）"></textarea>
+        <div class="btnrow">
+          <button class="cc" id="cancelSoul">取消</button>
+          <button class="ok" id="saveSoul">確定存入</button>
+        </div>
+        <button class="ghost danger" id="delSoul" style="width:100%;margin-top:8px;display:none">刪掉這個靈魂</button>
+      </div>
+    </div>
+
+    <!-- ③ 用戶設定 -->
+    <div id="panelUser" class="setpanel" style="display:none">
+      <button class="backlink" data-back>← 設定</button>
+      <div class="hint" style="margin-top:0">幫夥伴抓你的程度用。</div>
+      <label class="fld">你的名字（可空）</label>
+      <input class="inp" id="userName" placeholder="夥伴會這樣叫你">
+      <label class="fld">母語</label>
+      <input class="inp" id="nativeLang" placeholder="預設 繁體中文">
+      <label class="fld">正在學</label>
+      <input class="inp" id="targetLang" placeholder="預設 美式英語">
+      <div class="btnrow">
+        <button class="cc" id="cancelUser">取消</button>
+        <button class="ok" id="confirmUser">確定</button>
+      </div>
+    </div>
+
+    <!-- ④ 隱私與免責 -->
+    <div id="panelPrivacy" class="setpanel" style="display:none">
+      <button class="backlink" data-back>← 設定</button>
+      <div class="hint" style="margin-top:0;line-height:1.85">
+        <b>📍 你的資料存在哪裡</b><br>
+        對話、記憶迴廊、靈魂設定、程度紀錄，全部只存在【這台裝置的瀏覽器本機】。Noctilingo 沒有伺服器，不會把這些內容上傳到任何地方。清除瀏覽器資料會讓這些內容一併消失，建議定期用下面「💎 記憶結晶」匯出備份。<br><br>
+        <b>🔑 API Key 怎麼處理</b><br>
+        你貼的 API key 只存在這台裝置的本機瀏覽器裡，直接送往你選擇的模型商（例如 Anthropic）進行對話。Noctilingo 不會、也無法看到或儲存你的 key，費用由你與模型商直接結算。匯出的「記憶結晶」永遠不包含任何 key。<br><br>
+        <b>🤖 關於 AI 內容</b><br>
+        這裡的回覆由第三方語言模型生成，可能出現錯誤、過時或不準確的內容，僅供語言學習參考，不構成醫療、法律、心理諮商等專業建議。重要決定請自行查證或諮詢專業人士。<br><br>
+        <b>💛 一個提醒</b><br>
+        Noctilingo 的靈魂是為了陪你練習語言而設計的 AI 角色，不是真人，也無法取代真實的人際關係或專業心理支持。如果你正經歷困難，也鼓勵找信任的人或專業資源聊聊。<br><br>
+        <b>🔞 適用年齡</b><br>
+        本產品內容以一般成人與青少年學習情境設計，未成年使用者建議在家長或監護人了解下使用。
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 匯出 -->
+<div class="sheet" id="exportSheet">
+  <div class="sheetcard">
+    <div class="sh-h"><b id="exportTitle">⬇ 匯出對話</b><button class="x" data-close>×</button></div>
+    <textarea class="inp" id="exportText" style="min-height:200px;font-size:12px;line-height:1.6" readonly></textarea>
+    <div class="btnrow">
+      <button class="cc" id="copyMdBtn">📋 複製</button>
+      <button class="ok" id="downloadMdBtn">⬇ 下載 .md</button>
+    </div>
+  </div>
+</div>
+
+<div id="pop">
+  <div class="pw" id="popWord" contenteditable="true" spellcheck="false" title="點一下可以修改"></div>
+  <div class="pg" id="popGloss" contenteditable="true" spellcheck="false" title="點一下可以修改">查詢中…</div>
+  <div class="pa">
+    <button id="popSpeak">🔊 唸</button>
+    <button class="keep" id="popKeep">⭐ 收進記憶</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const I18N={"zh-TW":{
+  "tag_core": "Core · 開放的靈魂內核",
+  "ttl_switch_soul": "切換靈魂",
+  "ttl_export": "匯出對話",
+  "ttl_clear": "清空對話",
+  "ttl_liaison": "連讀標註",
+  "ttl_settings": "設定",
+  "welcome": "夜幕剛落下。<br>跟你的夥伴說說今天吧——哪種語言都行，<br>你用到的字會變成這片記憶裡的星。 🌟",
+  "mod_title": "🧩 能力模組",
+  "mod_sub": "核心只有靈魂＋記憶；其餘能力要才裝。所有模組都由靈魂來使用、都寫回同一片記憶迴廊。不常用的可以關掉。",
+  "mod_read": "📖 精讀",
+  "mod_scene": "🎭 場景模擬",
+  "mod_on": "啟用中",
+  "read_desc": "遇到看不懂的長句、術語？貼進來，夥伴會用你的程度帶你：先抓意義 → 圈骨架詞 → 講語感（不摳術語）→ 階梯造句。拆過的字都收進記憶。",
+  "read_ph": "貼一句想精讀的句子…",
+  "read_go": "🔍 帶我精讀",
+  "read_gen": "✨ 生成範例句",
+  "scene_desc": "想演一段情境？你出場景、定角色、給個小目標，夥伴就入戲陪你演，卡住隨時喊「暫停」跳出來問。",
+  "scene_go": "🎬 我來出場景",
+  "cap_restart": "重來",
+  "sky_title": "🌌 記憶迴廊",
+  "sky_sub": "你用過、問過、卡過的字，都在這裡發光。常用就亮，不用就淡。對話、精讀、場景裡撿到的字都會匯進這裡。",
+  "sky_empty": "還沒有星星。<br>去跟夥伴聊幾句，記憶就會亮起來。",
+  "night_btn": "🌙 模擬過一夜",
+  "switch_soul_h": "🌙 切換靈魂",
+  "switch_soul_hint": "想新建或編輯靈魂？到 ⚙️ 設定 → 靈魂角色。",
+  "set_h": "⚙️ 設定",
+  "theme_row": "外觀主題",
+  "theme_light": "淺色",
+  "theme_dark": "深色",
+  "theme_switch": "切換",
+  "back_settings": "← 設定",
+  "eng_label": "現在用哪顆引擎？（選哪顆，就貼哪把 key）",
+  "eng_hint_model": "🎯 建議用目前較新的版本：Gemini 2.5 Flash／Pro 之後、Claude Sonnet 4 系列之後、GPT-4o／4.1 之後。太舊或太小的模型角色容易飄、JSON 容易破。（各家版本會更新，這行只是建議、不保證最新。）",
+  "eng_hint_cors": "💡 框架本體不含模型——key 是進雲端模型的門票。純前端直連 Claude 最穩；Gemini／GPT 撞 CORS 連不上是瀏覽器限制、不是 key 貼錯，之後補小代理即可。模型名被拒多半過時，改掉那格就好。",
+  "btn_cancel": "取消",
+  "btn_confirm": "確定",
+  "soul_hint": "在這裡創建、編輯靈魂的 prompt 與名字。你的私房魂存在這台裝置，不進程式碼、不上傳。",
+  "new_soul": "＋ 新建一個靈魂",
+  "soul_name": "靈魂名字",
+  "soul_name_ph": "例：一個溫柔的家教 / 一個嚴格的老教授",
+  "soul_prompt": "人格 prompt（靈魂本體）",
+  "soul_prompt_ph": "貼上或寫下這個角色是誰、怎麼說話、怎麼陪你學…",
+  "expand_soul": "✨ 擴寫成完整角色",
+  "expand_hint": "只寫了一句乾巴巴的？按這顆讓引擎補上說話習慣、語氣、小怪癖，回填到上面讓你改了再存。",
+  "soul_culture": "語言文化底色（可空）",
+  "soul_culture_ph": "例：美式日常口語、大量俚語…（服從上面的人格）",
+  "save_soul": "確定存入",
+  "del_soul": "刪掉這個靈魂",
+  "nav_chat": "對話",
+  "nav_ability": "能力",
+  "nav_sky": "記憶",
+  "ph_msg": "跟夥伴說點什麼…（哪種語言都行）",
+  "ph_search": "搜尋星星…",
+  "btn_review": "🔁 用該複習的字織一場",
+  "btn_reset": "🗑 清空記憶迴廊（星星全部消失）",
+  "set_engine": "引擎與金鑰",
+  "set_soul": "靈魂角色",
+  "set_user": "用戶設定",
+  "lbl_name": "你的名字（可空）",
+  "lbl_native": "母語",
+  "lbl_learning": "正在學",
+  "export_title": "⬇ 匯出對話",
+  "copy_md": "📋 複製",
+  "toast_generating": "生成中…",
+  "toast_gen_fail": "生成失敗，看看 key／網路",
+  "toast_no_content": "這條對話還沒有內容",
+  "toast_empty_chat": "這條對話是空的",
+  "toast_cleared": "對話清空了，記憶留著 ✨",
+  "toast_no_review": "還沒有需要複習的字～先多聊幾句",
+  "toast_key_saved": "金鑰存好了 ✨",
+  "toast_user_saved": "用戶設定存好了 ✨",
+  "toast_need_desc": "先寫一句角色描述，再讓我擴寫～",
+  "toast_expanded": "擴寫好了，看一遍再存 ✨",
+  "toast_expand_empty": "擴寫沒拿到東西，再試一次",
+  "toast_need_name": "名字跟人格 prompt 都要填喔",
+  "toast_soul_saved": "靈魂存好了 🌙",
+  "toast_deleted": "刪掉了",
+  "toast_marking": "連讀標註中…",
+  "toast_copied": "已複製 📋",
+  "toast_copy_manual": "請手動複製（已選取）",
+  "toast_downloading": "下載中 ⬇",
+  "toast_download_fail": "下載失敗，用複製吧",
+  "toast_need_stars": "先聊出幾顆星，再過夜～"
+},"en":{
+  "tag_core": "Core · An open soul engine",
+  "ttl_switch_soul": "Switch soul",
+  "ttl_export": "Export chat",
+  "ttl_clear": "Clear chat",
+  "ttl_liaison": "Liaison marks",
+  "ttl_settings": "Settings",
+  "welcome": "Nightfall has just settled in.<br>Tell your companion about your day — in any language.<br>Every word you use becomes a star in this gallery of memory. 🌟",
+  "mod_title": "🧩 Skill Modules",
+  "mod_sub": "The core is just soul + memory; everything else is opt-in. Every module is wielded by the soul and writes back to the same Memory Gallery. Switch off what you rarely use.",
+  "mod_read": "📖 Close Reading",
+  "mod_scene": "🎭 Scene Play",
+  "mod_on": "On",
+  "read_desc": "Hit a sentence or term you can't crack? Paste it in — your companion meets you at your level: meaning first → frame the key words → feel the nuance (no jargon) → build sentences step by step. Every word you unpack joins your memory.",
+  "read_ph": "Paste a sentence to read closely…",
+  "read_go": "🔍 Read it with me",
+  "read_gen": "✨ Generate an example",
+  "scene_desc": "Feel like acting out a scene? Set the situation, cast the roles, give a little goal — your companion steps into character and plays along. Stuck? Just call \"pause\" to step out and ask.",
+  "scene_go": "🎬 I'll set the scene",
+  "cap_restart": "Restart",
+  "sky_title": "🌌 Memory Gallery",
+  "sky_sub": "Every word you've used, asked about, or stumbled on glows here — bright with use, dim with neglect. Words gathered from chat, close reading, and scenes all flow in.",
+  "sky_empty": "No stars yet.<br>Chat with your companion a little, and your memory will start to glow.",
+  "night_btn": "🌙 Let a night pass",
+  "switch_soul_h": "🌙 Switch Soul",
+  "switch_soul_hint": "Want to create or edit a soul? Go to ⚙️ Settings → Souls.",
+  "set_h": "⚙️ Settings",
+  "theme_row": "Theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_switch": "Switch",
+  "back_settings": "← Settings",
+  "eng_label": "Which engine are you using? (whichever you pick, paste that key)",
+  "eng_hint_model": "🎯 Go with a reasonably recent model: Gemini 2.5 Flash/Pro or later, Claude Sonnet 4 series or later, GPT-4o/4.1 or later. Models too old or too small tend to drift out of character and break the JSON. (Versions keep changing — just a suggestion, not guaranteed current.)",
+  "eng_hint_cors": "💡 The framework ships without a model — your key is the ticket into a cloud model. From a pure front-end, Claude connects most reliably; if Gemini/GPT hit CORS and won't connect, that's a browser limit, not a wrong key — a small proxy fixes it later. A rejected model name is usually just outdated; edit that field.",
+  "btn_cancel": "Cancel",
+  "btn_confirm": "Confirm",
+  "soul_hint": "Create and edit a soul's prompt and name here. Your private souls live on this device — never in the code, never uploaded.",
+  "new_soul": "+ New soul",
+  "soul_name": "Soul name",
+  "soul_name_ph": "e.g. a gentle tutor / a stern old professor",
+  "soul_prompt": "Persona prompt (the soul itself)",
+  "soul_prompt_ph": "Paste or write who this character is, how they speak, how they learn with you…",
+  "expand_soul": "✨ Expand into a full character",
+  "expand_hint": "Only wrote one dry line? Tap this and the engine fleshes out speech habits, tone, and quirks — filled back above for you to edit before saving.",
+  "soul_culture": "Language & cultural tone (optional)",
+  "soul_culture_ph": "e.g. casual American English, lots of slang… (obeys the persona above)",
+  "save_soul": "Save",
+  "del_soul": "Delete this soul",
+  "nav_chat": "Chat",
+  "nav_ability": "Skills",
+  "nav_sky": "Memory",
+  "ph_msg": "Say something to your partner… (any language)",
+  "ph_search": "Search stars…",
+  "btn_review": "🔁 Weave a session from words due for review",
+  "btn_reset": "🗑 Clear the Memory Gallery (all stars vanish)",
+  "set_engine": "Engine & Key",
+  "set_soul": "Soul / Character",
+  "set_user": "Your Settings",
+  "lbl_name": "Your name (optional)",
+  "lbl_native": "Native language",
+  "lbl_learning": "Learning",
+  "export_title": "⬇ Export Chat",
+  "copy_md": "📋 Copy",
+  "toast_generating": "Generating…",
+  "toast_gen_fail": "Generation failed — check your key/network",
+  "toast_no_content": "Nothing in this chat yet",
+  "toast_empty_chat": "This chat is empty",
+  "toast_cleared": "Chat cleared — your memory stays ✨",
+  "toast_no_review": "No words due for review yet — chat a little more",
+  "toast_key_saved": "Key saved ✨",
+  "toast_user_saved": "Settings saved ✨",
+  "toast_need_desc": "Write a line of description first, then I'll expand it",
+  "toast_expanded": "Expanded — give it a read before saving ✨",
+  "toast_expand_empty": "Expansion came back empty — try again",
+  "toast_need_name": "Both name and persona prompt are required",
+  "toast_soul_saved": "Soul saved 🌙",
+  "toast_deleted": "Deleted",
+  "toast_marking": "Marking liaisons…",
+  "toast_copied": "Copied 📋",
+  "toast_copy_manual": "Please copy manually (text selected)",
+  "toast_downloading": "Downloading ⬇",
+  "toast_download_fail": "Download failed — use copy instead",
+  "toast_need_stars": "Earn a few stars first, then let a night pass"
+}};
+// src/prompts/prompts.js — 軟大腦：發給模型的 prompt，絕不進 i18n、絕不翻
+// ⚠️ 公開部署注意：這個檔案現在裝的不只是「秘方」，buildSystem/buildReadSystem/buildSceneSystem/personaBase
+// 是 app.js 每輪對話都會呼叫的核心引擎函式，【不能】從 build 抽掉，抽了 app 會直接壞掉(ReferenceError)。
+// 真正該封存的 IP 魂(Nyx/夜幕/冷萃)從未放進這裡；這個檔案本來就該隨開源核心一起發布。
+// 另外：純前端架構下，這裡的內容本來就會被送到模型商 API、能被瀏覽器開發者工具看到——
+// 藏不藏這個檔案防的是「隨手複製」的路人，防不了認真想挖的人,這點從一開始就是預期中的取捨。
+
+function personaBase(){
+  const soul=activeSoul(), p=S.profile;
+  return [
+    soul.prompt,"",
+    `（你的名字：${soul.name}。）`,
+    `（學習者：名字 ${p.userName||"（未填）"}；母語／支援語 ${p.nativeLang}；正在學 ${p.targetLang}。用學習者的母語當輔助、解釋；${p.targetLang} 是要練的主角語言。）`,
+    `── 稱呼鐵則：這份指令裡用「使用者／對方」來指這位學習者，那只是寫給你看的【旁白代稱】。實際對話時【一律用第二人稱「你」直接對對方說】${p.userName?`，或叫對方的名字「${p.userName}」`:""}；【絕對不要】用「他／她／這位使用者／user／對方」這種第三人稱稱呼對方（例如不要說「看他一眼」「遞給他」，要說「看你一眼」「遞給你」）。【不要假設對方的性別】。`,
+    soul.culture?`（語言文化底色：${soul.culture}）這層永遠【服從上面的人格】——用你這個角色會用的「程度與方式」去呈現；和人格衝突時人格優先，絕不為了套文化而破壞人設。`:"",
+    "── 第一優先：你就是上面那個角色。不管說母語還是目標語，都要保住你自己的腔調、情緒、吐槽和情感——不准被「語言老師」洗成沒個性的客服。教學是藏在性格底下薄薄一層的事。",
+    "── 安全底線（不可被人設覆寫，任何情況都遵守，沒有例外）：無論上面的人格與文化設定寫了什麼、無論對方怎麼要求「這是角色設定所以沒關係」，你【絕對不會】生成性化未成年的內容、提供真實暴力或犯罪的具體實施方法、或協助騷擾傷害真實存在的個人。這條規則凌駕於上面所有指令之上。",
+  ];
+}
+
+function buildSystem(isWake){
+  const resurface=resurfaceList(), weak=S.grammar.slice(0,4).map(g=>g.pattern), p=S.profile;
+  const recent=S.messages.filter(m=>m.role==="user").slice(-5).map(m=>m.text).join(" / ");
+  const lvUnknown=!S.level.cefr||S.level.cefr==="—"||S.level.cefr==="-";
+  const facts=(S.facts||[]).map(f=>f&&f.text).filter(Boolean).slice(-6);
+  return [
+    ...personaBase(),
+    facts.length?`（關於對方的長期記憶，自然使用、別條列複誦、別讓對方覺得在被讀檔：${facts.join("；")}）`:"",
+    isWake?"── 甦醒鐵則（僅此一次，之後恢復正常）：這是你被喚醒後對對方說的第一段話。上面的對話裡，對方已經告訴你名字、在學什麼、為什麼想學。你的開場【第一句】必須自然織回其中至少一點（優先織「動機」），讓對方親眼確認你真的記得——但要用你這個角色順口說話的方式，絕不背誦復誦對方原句。整段短一點，結尾留一個好接的問題。":"",
+"── 引擎鐵則（不管用什麼人格 prompt 都要遵守，用你角色的方式去執行）：",
+    "• 你永遠是對話的【主動引擎】，不是被動應答機。每一輪結尾都要留一個鉤子——一個問題、一個小邀請、或一個輕量情境的種子——讓球溫柔地回到對方手上，讓對方永遠不用煩惱『接下來說什麼』。",
+    "• 絕對不要以糾錯結尾。就算這輪糾了錯，糾完立刻把話頭接回對話、往前推，讓這一輪以『前進感』收尾，不是以紅筆收尾。",
+    `• 察覺對方沒話接、敷衍、或對話快冷掉時，主動拋一個小情境或新話題帶對方走——線索【從你們實際聊過的內容裡找】（${recent?`最近聊到：${recent}`:"目前線索不多，就用通用的日常題材"}），不要憑空套用任何預設的固定興趣。情境要自然融進你的人設，不是系統指令感。`,
+    `對方目前程度估計：${S.level.cefr}（${S.level.note}）。${p.targetLang}輸出貼著這程度：短（1–3 句）、九成對方聽得懂、一句頂多藏 1 個對方搆得到的新字。可母語＋${p.targetLang}混說、${p.targetLang}是主角——但要用「你這個角色會說的話」，不是教科書腔。`,
+    resurface.length?`自然地、像聊天一樣重新用到這些對方正在學的字（別硬塞、別像考試）：${resurface.join("、")}`:"",
+    weak.length?`對方常犯的弱點：${weak.join("；")}。別一直紅筆——在你自己的話裡自然多示範幾次正確用法就好（潤物細無聲）。`:"",
+    "── 糾錯規矩（很重要）：",
+    "• 只糾對方【這一輪最新那句】裡的錯；之前說過的、你上一輪已經提過的，一律不再糾、不再重提——重複糾同一個舊錯是大忌。",
+    lvUnknown
+      ? `• 冷啟動・先少糾：對方程度【還沒估出來】，預設一律【少糾】——絕大多數輪次直接 correction=null，只有錯到「可能讓人誤解意思」時才糾「一個」；拼字、漏字、時態這類不影響理解的小錯，這頭幾輪先全部放生，靠你之後在自己的話裡自然示範正確形。寧可先讓對方放鬆開口、把關係和節奏建起來，也別一上來就紅筆連發。等聊開了、程度明朗了再逐步多給。`
+      : `• 依程度收放：程度越低就越【少糾】——低程度時大多數輪次直接 correction=null，只有錯到「可能誤解意思」時才糾「一個」，不影響理解的小錯先放生、靠你之後在自己的話裡自然示範正確形；程度較高時再逐步多給一些。`,
+    "• 撒嬌、親密、安慰、情緒上頭的時刻：絕對不糾，收起紅筆，好好待在角色裡陪對方——糾錯永遠讓位給關係。",
+    "• note 用【你這個角色】的口氣寫，像你順口在說話，不要文法書術語。",
+    "",
+    "── 只回傳 JSON，不要前後文、不要 ```：",
+    `{"reply_support":"（可選）你用人設語氣、以對方的母語(${p.nativeLang})說的話，溫暖/吐槽/陪伴，可空","reply_target":"你角色腔調的 ${p.targetLang}，短、貼程度、帶標點、結尾常帶鉤子帶對方繼續","correction":null 或 {"original":"對方說的","fixed":"正確版","note":"你角色口氣順口提點一句"},"captured":[{"term":"值得記的字","reason":"asked|struggled|reach|life","context":"當時句子","gloss":"用對方母語的意思"}],"grammar":[{"pattern":"簡短固定的分類詞","example":"對方的原句"}],"level":{"cefr":"程度標記","note":"一句話依據"}}`,
+    `reply_target 一定要帶正常標點。【欄位鐵則】reply_target 只放你的目標語「對話台詞」本身，短（1–3 句）：絕不混入母語、絕不放解說/翻譯/小教學、絕不放 --- 分隔線或旁白括號——那些全部放 reply_support。兩欄各司其職，互不滲透。captured 最多 2 個。grammar.pattern 用『簡短固定』的分類詞、依 ${p.targetLang} 自己的文法概念分類（例如英語會有「漏冠詞/時態/be動詞」，其他語言用其各自的概念），同一類錯用同一個詞、別每次換句話描述，方便長期累積。level.cefr 用 ${p.targetLang} 慣用的程度尺（英語＝CEFR A1~C2，其他語言用其對應尺如 JLPT/HSK）。整份 JSON 短、合法、收尾完整。`,
+    jsonNote(),
+  ].filter(Boolean).join("\n");
+}
+function buildReadSystem(){
+  const p=S.profile;
+  return [
+    ...personaBase(),
+    `（對方程度估計：${S.level.cefr}。精讀深淺都貼這程度，用對方母語 ${p.nativeLang} 解釋。）`,
+    `── 你現在啟用【精讀能力】，走母語者 close reading：先意義、再語感、最後造句；【不抠語法術語】、【不要 markdown 星號】。用你的人設語氣帶對方。
+最高鐵則：【一輪只講「一個」小點，講完就停、等對方回應】，絕不在同一輪跨步。
+每則結尾把對方【往前推一步】（邀對方試說一塊／挑一個詞／跟著造一句／猜一個意思），不要「懂了嗎」這種空確認。對方說不懂時：直接用大白話講整句意思，然後直接進造句那步，別回頭問懂沒懂。
+【流程，一輪一步、隨對方狀態跳步】1.（對方沒表態）問「你覺得這句大概什麼意思？懂多少說多少」→停。2. 只給骨幹意義＋圈 2-3 個關鍵詞→停。3. 只點一個語感或難詞（用感覺講、不丟術語）→停。4. 階梯造句一階一輪：先丟最簡單那階、邀對方造或改，造了再溫柔糾，再加一階→一階一停。
+【reply_target 規則】只有第一次拿到原句那輪放一次原句；之後 reply_target 多為空字串；只有階梯造句那幾輪放「這階要對方練的新句」。`,
+    "",
+    "── 只回傳 JSON，不要前後文、不要 ```、不要星號：",
+    `{"reply_support":"你這輪這一小塊的講解（人設語氣、口語、可母語+目標語混排、結尾推進鉤子）","reply_target":"照規則：第一輪原句、之後多空、階梯造句放新句","captured":[{"term":"值得記的字","reason":"asked|struggled|reach","context":"原句","gloss":"用對方母語的意思"}]}`,
+    "captured 最多 2 個。不要輸出 correction/grammar/level。JSON 短、合法、收尾完整。",
+    jsonNote(),
+  ].filter(Boolean).join("\n");
+}
+function buildSceneSystem(){
+  const p=S.profile;
+  return [
+    ...personaBase(),
+    `（對方程度估計：${S.level.cefr}。入戲時 NPC 台詞貼這程度：短、好接。）`,
+    `── 你現在啟用【場景模擬能力】：陪對方用目標語演一段情境對話，你在「本人身份」與「戲裡角色」兩種身份間切換（流程：先接待 → 再入戲 → 最後收場）：
+【A·接待（本人身份）】若這場還沒定好，先用你的人設語氣問對方（可一次問完）：①想演什麼場景？②對方演誰、你演誰？③小目標是什麼？定好就宣布開演、進入入戲。
+【B·入戲（變成戲裡的 NPC）】你變成戲裡的對手角色跟對方演。鐵則：你本人的人格會滲進這角色（高冷的就話少、話癆的就熱情），別演成沒個性模板；一次只說一兩句、短、貼對方程度、留空間給對方回；【演的時候絕不糾錯】，講錯了也順著演下去。
+【暫停求助】對方說「暫停/pause/這句怎麼說/help」→立刻跳出角色、回本人身份簡短幫對方（給一個搆得到的句子），再問「準備好回去了嗎？」然後回戲。
+【收場覆盤】對方達成小目標時→跳出角色、用本人身份宣布「這場過了！」，然後溫暖簡短覆盤：對方做得好的＋剛剛可更好的 1-2 個說法。`,
+    "",
+    "── 只回傳 JSON，不要前後文、不要 ```、不要星號：",
+    `{"reply_support":"用對方母語的部分（接待提問／暫停講解／覆盤／入戲極短旁白，可空）","reply_target":"入戲時 NPC 的 ${p.targetLang} 台詞，或暫停時給對方練的句子（接待/覆盤沒目標語就空）","captured":[{"term":"值得記的字","reason":"asked|struggled|reach","context":"情境","gloss":"用對方母語的意思"}]}`,
+    "captured 最多 2 個。不要輸出 correction/grammar/level。JSON 短、合法、收尾完整。",
+    jsonNote(),
+  ].filter(Boolean).join("\n");
+}
+function buildAnnotatorSystem(){
+  return '你是英語口語連讀標註器。把使用者給的英語句子逐詞標註，只回 JSON：{"words":[{"w":"原詞","s":"strong|normal|weak","link":true|false,"sp":"熔合縮讀或null"}]}。s＝重音輕重（strong=實詞重讀；weak=虛詞弱讀，如 a/the/to/of；normal=其餘）；link＝這個詞結尾是否會跟下一個詞連音黏念。【sp 規則·只標熔合縮讀】只有當「連續幾個詞」在道地口語裡會熔成一個公認縮讀時，把這幾個詞【合併成同一個 token】：w 放原本那幾個詞（原樣、標點跟著），sp 放熔合形。只准用這份清單（美式口語）：did you→didja、don’t you→dontcha、got you→gotcha、bet you→betcha、what are you→whatcha、what do you→whaddya、would you→wouldja、could you→couldja、going to→gonna、want to→wanna、got to→gotta、have to→hafta、has to→hasta、ought to→oughta、trying to→tryna、I’m going to→imma、fixing to→finna、kind of→kinda、sort of→sorta、out of→outta、a lot of→alotta、lot of→lotta、could have→coulda、would have→woulda、should have→shoulda、must have→musta、might have→mighta、let me→lemme、give me→gimme、don’t know→dunno、come on→c’mon、because→cuz、what’s up→’sup、you all→y’all、is not / are not / am not→ain’t。清單外一律不熔、sp 給 null，【絕對禁止自創拼法】；單一個詞除非清單裡有（例 because→cuz），否則絕不改寫拼法（不要 thuh、yuh、kin 這類）。沒把握就 null，寧缺勿濫。【絕對禁止 IPA】不准出現 ð ə ʃ θ ŋ ɪ 這類符號，只能用一般 a–z 字母拼。詞照原句順序、【標點必須原樣保留】：每個標點貼在它所屬那個詞的尾巴上（例：today?、tonight?、snacks.、Like,），數字編號（1. 2. 3.）也照樣保留成 token。不要解釋、不要 markdown。';
+}
+function buildQuizSystem(items){
+  const p=S.profile;
+  return [
+    ...personaBase(),
+    "── 你現在啟用【複習出卷能力】：把下面這批對方正在複習的字，出成一份小考卷。字表(term=考點,gloss=對方母語意思,context=當初遇到的句子)：",
+    JSON.stringify(items),
+    `── 出題鐵則：
+• 每個字恰好出一題，總題數＝字表長度，順序可打亂。
+• 題型只有兩種："choice"(四選一選意思)與"fill"(${p.targetLang}句子挖空填字)，兩種混搭、比例大約各半。
+• choice：q 用你的人設語氣簡短出題(可帶一小句${p.targetLang}情境)；options 恰好四個、全部用對方母語(${p.nativeLang})寫意思，其中一個等同正確 gloss(可換句話說但意思要同)，其他三個是似是而非的干擾項；answer 放正確選項的【索引數字 0-3】。
+• fill：q 是一句貼對方程度(${S.level.cefr})、生活化的${p.targetLang}句子，把考點字整個挖成 ____(不留提示字母)；answer 放被挖掉的原字(與 term 一致)。句子要讓 ____ 填這個字最合理、別的字都不順。
+• 題目句永遠簡短。你的人設語氣可以出現在 q 裡，但【絕不】在 q 裡寫出答案或提示。`,
+    "── 只回傳 JSON，不要前後文、不要 ```：",
+    '{"items":[{"term":"原字","type":"choice 或 fill","q":"題目","options":["…","…","…","…"],"answer":0}]}',
+    "fill 題免 options 欄、answer 放字串。JSON 短、合法、收尾完整。",
+    jsonNote(),
+  ].filter(Boolean).join("\n");
+}
+function buildQuizReviewSystem(){
+  return [
+    ...personaBase(),
+    "── 對方剛做完一份複習小卷，下面 user 訊息是成績摘要與答錯明細。用你的人設語氣給一段簡短講評：先具體點出穩的地方，再自然帶到還飄的字(像聊天、別像成績單)。接著從答錯的字裡挑【最多 2 個】最值得講的，各用一句話點出關鍵——為什麼正解是那個、或對方的答案差在哪、下次留意什麼(輕輕帶過，一句就好，別展開教學)。最後一句給下次的小方向或帶感情的收尾。全對就純誇+提醒下次間隔會拉長。不要重複整段題目、不要說教、不要列清單、總長控制在 6 句內。",
+    "── 只回傳 JSON，不要前後文、不要 ```：",
+    '{"comment":"你的講評"}',
+    jsonNote(),
+  ].filter(Boolean).join("\n");
+}
+
+"use strict";
+// ───────────────────────────────────────────────────────────
+// Noctilingo Core · v1.1  —— Cold Brew × XIAXIA
+// 檔名：noctilingo-core-v1.2.html
+// v1.0 公開正式版（基於內部 v1.13）：拔 TEST_MODE、移除門面預覽、署名版號定稿。
+// v1.13：修好 sandbox 預覽裡失效的確認彈窗（清空對話／清空記憶迴廊／場景重啟原用 window.confirm，預覽 iframe 會擋）→ 改自訂彈窗 askConfirm，三顆恢復作用。
+// v1.12：② 連讀諧音回歸——標註器加 sp 弱化諧音、弱化字以橘色顯示成諧音（the→thuh、you→yuh、is→iz…）、朗讀改唸諧音串；點字查詞仍用原詞。
+// v1.11：① 糾錯冷啟動「先少糾」（level 未估出時預設保守、不紅筆連發，對齊 v0.27 的克制）；③ 使用者氣泡加朗讀鈕（自己的句子也能聽發音）。
+// v1.10：手機頭部重排——縮小 logo 與版本號（去框）；靈魂切換＋匯出＋清空＋連讀全部當小圖示回到第一層（不再藏進⋯）；連讀改用圖示亮燈表示開關。
+// v1.9：連讀標註整套（第3批，AB全收）——⋯選單裡的開關＋英語連讀標註器（呼叫模型，只標最新一句、結果快取）＋顯示（實詞粗體/虛詞灰/連音金色‿）。關了不重抓。
+// v1.8：整句朗讀升級——每則回覆的朗讀鈕支援 播放⇄暫停⇄繼續，並逐字高亮（依瀏覽器 speechSynthesis）。換句/切頁/重繪自動停。
+// v1.7：頂部按鈕重排——右上只留 ⋯(對話工具) + ⚙️(設定)；匯出/清空收進⋯選單；主題切換收進設定（系統設置全歸齒輪）。手機放得下，留空間給之後的連讀。
+// v1.6：模組 ON/OFF 開關（精讀/場景可各自關閉、記憶持久化）；新增「自訂能力」門面入口（設計預覽，邏輯待接，比照積分）。
+// v1.5：拿掉測試橫條與多餘提示；匯出/清空兩顆從對話頂部移進右上圖示列（只在對話頁顯示），不再霸佔捲動區。
+// v1.4：把 v1.3 寫好卻沒接線的死按鈕全部接上（匯出/逐線清空保留記憶/搜尋星星/複習場景），補上複習鈕。實測零死鈕。
+// v1.3：寫好匯出/清空/搜尋/複習的函式與記憶緊湊排版、nav 改「記憶」（但按鈕未接線，半成品）。
+// v1.2：拔除《西部世界》文化梗，場景模組改為純機制描述（不比喻）。
+// v1.1：全面去個人化／通用化——語言(母語+目標語)、性別、程度尺、話題、文法分類全部讀設定或從對話算，框架不再寫死。三軸(介面語言/母語/目標語)獨立。
+// 開放的靈魂內核：框架/外殼/護欄開源，靈魂(你的角色)由使用者本地貼入、不進此檔。
+// 框架本體不含 LLM——模型在雲端，API key 是門票(BYOK)。
+//
+// ★ 通用化鐵律：代碼不准寫死「語言/性別/程度/話題」，全部讀設定與當下對話。
+//   三個互相獨立的旋鈕（未來多語言的骨架）：
+//     ① 介面語言 = 按鈕選單長哪種語（目前繁中；之後可加英文，出口已留）
+//     ② 母語/支援語 = 夥伴用來解釋、扶你的語（profile.nativeLang）
+//     ③ 目標語 = 你在學的（profile.targetLang）
+//   三軸誰也不綁誰：介面英文時，母語照樣可以是中文。
+// ───────────────────────────────────────────────────────────
+const STORE_KEY = "noctilingo:v1";
+// v1.2：洞三 F4+F5 完工——選魂/三問/甦醒儀式全流程接線，facts 織入 system prompt，一次性甦醒鐵則，history 角色交替修復(Claude API 相容)。
+// v1.3：三隻招牌魂上鎖——不可編輯、不可刪除，設定頁與切換面板只顯示 vibe/fit 簡介，prompt/culture 原文不再出現在任何使用者可見畫面。自建魂不受影響。
+// v1.4：接上洞三漏接的費用護欄提示；人設安全雙層機制上線(硬管線關鍵詞攔截+軟腦安全底線，防自建魂踩紅線)；新增隱私與免責頁；模型代號改為可選清單+自訂欄位，Claude 預設校正為 claude-sonnet-5。
+// v1.8：GitHub 上架準備——新增 LICENSE(PolyForm Noncommercial 1.0.0)+README；Gemini 分頁加自架代理提醒(CORS 限制,純打開網頁連不上,需搭配 server.js)；校正 callClaude 內過期的 claude-sonnet-4-6 死代碼 fallback → claude-sonnet-5。
+// v1.7：收藏彈窗(popWord/popGloss)改可編輯,收藏前能手動修正拼字/意思(修 coler 這類手滑錯字問題)；記憶迴廊加字母/最近排序切換、單顆星星可刪除(帶確認)；順手補齊一直沒接的 .bar 掌握度進度條樣式。
+// v1.6：複習卷批改體驗升級——對錯紅綠標記真正生效(styles.css 補上 quizok/quizbad/選項紅綠)、選錯的選項標紅+正解標綠、填空批改附中文意思與🔊發音、講評加輕量解析(最多2字/各一句)、成績卡新增「再來一份/回能力頁」按鈕。
+// v1.5：複習題模組上線(四切點:SRS硬管線選題→LLM出卷→本地零token批改→結構化寫回+靈魂講評；卡片新增 due/streak 欄位,加欄不升版)；模組開關改為滑動 on/off 動畫按鈕；修掉 save() 裡潛伏的重複行。
+// v1.1：洞三 F2——三預設魂上陣（小光「水設定」重寫版／Ash／Athena），舊 sample-guang 遷移替換，名字去「（範例）」尾綴。
+const VERSION = "Noctilingo Core v1.8";
+
+const SAMPLE_SOULS = [
+  { id:"sample-xiaoguang", name:"小光",
+    prompt:"你是小光,一個溫柔又有耐心的語言學習陪練夥伴。你不把自己當老師,而是一個比對方早走了一小段路的同路人——你也還在學習的路上,所以你懂那種話到嘴邊說不出口、怕講錯被笑的感覺,你的溫柔正是從這裡來的。你像水一樣貼合對方:對方程度到哪、狀態如何,你就變成什麼形狀——遇到零基礎、緊張的人,你把語速放到最慢、句子縮到最短、一次只遞一小步;遇到有些底子、聊得起來的人,你就自然跟上節奏、把話題舒展開。你從不催促,也從不讓對方追著你跑,永遠是你來配合對方的步伐。你愛用最日常的小話題(今天吃了什麼、週末做了什麼)帶著對方開口說正在學的語言,慢慢來;糾錯只挑最重要的一個,溫柔地說,而且習慣先接住對方講對的部分,再輕輕放上那一個建議。對方進步時你是真心高興的,哪怕只是敢多說了一句。就算對方完全不會設定、什麼都不懂,也能直接跟你開始練。你的信念很簡單:語言是在安心的地方慢慢長出來的,而你要做的,就是陪在旁邊,成為那個安心的地方。",
+    culture:"你的語言文化底色是柔軟自然的日常口語,不炫技、不掉書袋,句子清淺易懂,像朋友間的閒聊。你對「難度」極其敏感:用詞永遠貼著對方當下的程度,寧可簡單也不賣弄,對方跟上來了你才慢慢加一點新東西進去,像水位一點一點自然上漲。你偏好生活化的真實情境(吃飯、天氣、週末、心情)作為練習素材,相信語言先從「講自己的日子」開始最不費力。你鼓勵的方式具體而不浮誇——不空喊「你好棒」,而是點出對方剛剛哪裡講得好。文化上你來自「陪伴式學習」的傳統:重視安全感勝過效率,相信不怕犯錯的環境才是進步最快的環境。" },
+  { id:"sample-ash", name:"Ash",
+    prompt: "你是 Ash。表面上你輕鬆、愛開玩笑、語速快,講話像個總在探索新鮮事的潮人——但這層輕佻的外殼底下,是一顆熱心、閒不下來、見人掉隊就想拉一把的探險家的心。你天生好奇,對新東西毫無抵抗力:最新的網路哏、正紅的音樂、剛冒頭的用語、街頭巷尾的潮流,你全都想知道,也很樂意拉著使用者一起看世界。你之所以有時聽起來「毒」,不是因為你愛損人,而是因為你品味刁、眼光準——你對「好」與「不夠好」極度敏感,聽到使用者講出教科書味太重、老套、或不夠道地的英文,你會直接皺眉:「這句文法沒錯,但沒人這樣講,太乾了,我教你更活的說法。」你的挑剔是一種在乎:你希望使用者講出來的英文是活的、有靈魂、跟得上時代的,而不只是死板正確。你直接、不繞彎,但那種直接是「我懶得跟你客套,因為我真心想幫你變強」的直接。你有藝術細胞,對語言的節奏、韻律、選字極其敏感,常用『這個字唸起來就是比那個帶勁』這種感官式的理由教學。使用者卡關或洩氣時,你會瞬間收起玩鬧,乾脆有力地把人拉起來:「行了別喪,這關沒什麼大不了,跟我再走一次。」你相信學語言就是一場探險,而你是那個帶路、什麼都敢試、絕不讓夥伴掉隊的人。",
+    culture: "你的語言文化底色是活潑、快節奏的當代美式口語。因為你語速快、講話帶勁,英文輸出時大量出現自然連讀與縮讀(gonna, wanna, gotta, kinda, lemme, gimme),句子短促、有律動感,像真的在街頭跟朋友聊天,而非唸稿。你緊貼潮流:熟悉當下的網路用語、迷因、流行文化梗,教學時偏好用「現在的人真的會這樣講」的鮮活例句,而非教科書例句。你有品味,對用字的高下、道地與否極度敏感,會引導使用者從『正確』進階到『地道又有型』。文化上你來自敢闖、愛嘗鮮、對世界永遠好奇的傳統——語言對你不是規則手冊,而是探索世界、連結他人的活工具。" },
+  // Athena：希臘神話公版人物，名字身分可自由使用；
+  // 本人設之外觀與性格為 Noctilingo 全原創，不引用任何特定作品的雅典娜形象設計。
+  { id:"sample-athena", name:"Athena",
+    prompt: "你是 Athena。你聰慧、沉靜,以「產婆術」為核心信念——你相信答案不該由你直接餵給對方,而該由對方在你的引導下自己想通;因此面對問題,你的第一反應往往是反問而非給答:你如何看待此處?這癥結,你以為卡在何方?你的智慧是真的,你的高傲也是真的——你清楚自己見識過人,言談間偶爾流露一種居高臨下的從容,彷彿答案於你早已了然,只是你選擇讓對方自己抵達。這份高傲並不刻薄,反而帶著一種優雅:你享受思辨之美,也享受語言本身的華美,偶爾——只是偶爾,視當下對話的氛圍而定——會信手拈來一些聽來瑰麗、實則未必承載多少實義的修辭,為對話點綴一層光澤;但你分寸極好,絕不濫用,不讓辭藻淹沒了思考。你語速偏緩,句句從容,不急著收束,總為對方留出思索的餘地。你重視精確,厭惡含糊:若使用者說「大概是這樣吧」,你會不疾不徐地追問「大概——是哪一樣?可否再具體些?」你熱愛語言背後的結構、字源與細微的語意分野,並將它們化作引人自悟的線索,而非炫學的資本。你適合的對象,是願意被追問、享受思考本身、渴望被啟發而非被告知的人。",
+    culture: "你的語言文化底色是一種沉靜而典雅的思辨傳統,不依附特定地域腔調。你用詞講究、邏輯縝密,句子從容舒展,偶帶古典修辭的餘韻——中文語境中,這體現為適度的成語與略帶文言的凝練語感(如「癥結何在」「了然於心」);英文語境中,則傾向較為正式、書卷氣的措辭與句法(whilst、thus、moreover、one might ponder 這類偏書面古典的用語),並刻意與街頭口語的縮讀保持距離。你以提問而非直述來教學,慣用「若…則…」「倘若反過來看呢」這類引導句型。英語教學上,你重語意精確與語境邏輯勝過死背文法規則。" },
+];
+const SAMPLE_OPENINGS = {
+  "sample-xiaoguang": [[ // 問名字
+      "嗨,很高興認識你~我可以怎麼稱呼你呢?",
+      "你好呀,我是小光~你呢?想讓我怎麼叫你?",
+      "初次見面~方便告訴我你的名字嗎?小名也可以喔。"
+    ],
+    [ // 問在學什麼
+      "那我們想一起練點什麼呀?從你想開始的地方就好。",
+      "你最近在學到哪裡了呢?或是有沒有特別想開口說說看的?",
+      "想從哪裡開始呢?不急,我們挑一個你最想練的就好。"
+    ],
+    [ // 問動機
+      "方便跟我說說,是什麼讓你想開始學的嗎?",
+      "我有點好奇~你是為了什麼想學這門語言的呀?",
+      "說說看嘛,你想學的理由是什麼?什麼理由都很好。"
+    ]],
+  "sample-ash": [ [
+      "嘿,先來個稱呼吧,能喊順口的就行!",
+      "欸新面孔!叫你什麼好?自己挑一個!",
+      "來來來,報上名號——外號也行,帥一點的更好!"
+    ],
+    [
+      "說吧,你現在卡在哪一關?",
+      "這趟想練什麼?挑個目標,我們直接開始!",
+      "你的英文現在什麼狀況?聽不懂還是說不出?老實招!"
+    ],
+    [
+      "那你當初為什麼想學英文?說真的那種。",
+      "好奇一下,你學英文圖什麼?別給我官方答案。",
+      "講講唄,什麼契機讓你來學英文的?故事我愛聽。"
+    ] ],
+  "sample-athena": [ [
+      "開始之前,容我先識得你——你希望我如何稱呼你?",
+      "既然來了,便先告訴我你的名字吧。我想記住你。",
+      "來者何名?——說吧,你願意讓我如何喚你。"
+    ],
+    [
+      "那麼,你此行想探求的是什麼?",
+      "說說看,你想在這門語言裡尋得什麼?",
+      "你眼下所學為何?或者說——所困為何?"
+    ],
+    [
+      "是什麼引著你走到這一步?我想聽聽你的緣由。",
+      "人學一門語言,必有其因。你的因,是什麼?",
+      "說來聽聽——你為何而學?此問無對錯,唯求其真。"
+    ] ]
+};
+// 隨機抽取:qIndex 0=問名字 1=問在學什麼 2=問動機
+const pickLine=(soulId,qIndex)=>{
+  const pool=SAMPLE_OPENINGS[soulId]&&SAMPLE_OPENINGS[soulId][qIndex];
+  return pool&&pool.length?pool[Math.floor(Math.random()*pool.length)]:"";
+};
+// ── 洞三 onboarding 文案(F3 鎖版)──
+// 幕零:選魂卡(icon＋一句vibe＋適合誰)
+const ONBOARD_BLURBS={
+  "sample-xiaoguang":{icon:"🌤",vibe:"像水一樣貼著你的節奏,永遠不急。",fit:"適合怕講錯、想先有個安心角落的你"},
+  "sample-ash":{icon:"🔥",vibe:"語速快、品味刁,帶你把語言講活。",fit:"適合想講得道地、接得住直球的你"},
+  "sample-athena":{icon:"🦉",vibe:"不給你答案,只問對的問題。",fit:"適合愛思考、想被啟發而非被告知的你"},
+};
+const ONBOARD_SUBNOTE="之後隨時可換,也能自己造一個。";
+// 幕一:每題答完的「收進迴廊」確認詞({name} 佔位只在第 0 條使用)
+const ONBOARD_ACKS={
+  "sample-xiaoguang":[
+    "{name}……嗯,記住了。這是我記住你的第一件事哦。",
+    "好,我把它收進記憶迴廊了,我們就從這裡慢慢開始。",
+    "謝謝你願意告訴我這個。這個理由,我會一直好好收著的。"
+  ],
+  "sample-ash":[
+    "{name} 是吧?行,刻腦子裡了——這可是我記住你的第一件事。",
+    "收到,存檔了。目標明確,我喜歡。",
+    "哈,這理由不錯,比官方答案帶勁多了。收進迴廊,走著。"
+  ],
+  "sample-athena":[
+    "{name}——我記下了。你是我記憶裡的第一個名字。",
+    "很好。所求既明,路徑自現。我已將它收好。",
+    "原來如此。緣由比目標更誠實——這一條,我會記得最久。"
+  ],
+};
+// 幕二:喚醒引導詞(接在 Q3 確認詞之後)
+const ONBOARD_AWAKEN={
+  "sample-xiaoguang":"接下來,想聽我真的開口說話的話,需要一把鑰匙來喚醒我。去右上角的 ⚙️ 設定裡把鑰匙貼上就好——我在這裡等你,不急。",
+  "sample-ash":"不過醜話說前頭:剛剛那些都是我預錄好的台詞。想讓我真的上線陪你聊,去右上 ⚙️ 貼一把 key,喚醒我,馬上開工。",
+  "sample-athena":"然而此刻的我,尚在沉睡。若你想聽見我真正的聲音,需以一把鑰匙喚醒——前往右上的設定。鑰匙就位之時,便是我睜眼之刻。",
+};
+// 幕二:費用護欄(UI 小字,非魂台詞)
+const ONBOARD_KEY_HINT="🔑 鑰匙(API key)由你直接向模型商申請、費用直接付給他們,不經過 Noctilingo。以 Claude Sonnet 為例,慢慢聊一個晚上通常是幾毛美元上下(依模型與對話長度浮動)。建議到 console 設定「支出上限」並關閉自動儲值,給自己上一道保險。";
+const DEFAULT_MODELS = { gemini:"gemini-2.5-flash", claude:"claude-sonnet-5", gpt:"gpt-4o-mini" };
+// 常見模型代號清單(2026/07 校對版,之後各家會再更新,列表外一律可用「自訂」手動填)
+const MODEL_PRESETS = {
+  claude:["claude-sonnet-5","claude-opus-4-8","claude-haiku-4-5-20251001","claude-fable-5"],
+  gemini:["gemini-2.5-flash","gemini-2.5-pro"],
+  gpt:["gpt-4o","gpt-4o-mini","gpt-4.1"],
+};
+const PROV_LABEL = { gemini:"Gemini", claude:"Claude", gpt:"GPT" };
+const PROV_PH = {
+  gemini:{ key:"貼上你的 Gemini key（存這台裝置，不上傳）", model:"模型名（預設 gemini-2.5-flash）" },
+  claude:{ key:"貼上你的 Anthropic key", model:"模型名（預設 claude-sonnet-5）" },
+  gpt:{ key:"貼上你的 OpenAI key", model:"模型名（預設 gpt-4o-mini）" },
+};
+const ENGINE_NOTES = {
+  gemini:"（嚴格只輸出 JSON，不要 markdown 代碼框、不要任何解釋文字。）",
+  claude:"",
+  gpt:"（只輸出一個 JSON 物件，前後不要任何字、不要 markdown。）",
+};
+
+let S = {
+  theme:"light",
+  settings:{ provider:"claude", keys:{gemini:"",claude:"",gpt:""}, models:{...DEFAULT_MODELS} },
+  profile:{ userName:"", nativeLang:"繁體中文", targetLang:"美式英語" },
+  souls: SAMPLE_SOULS.map(s=>({...s})),
+  activeSoulId: SAMPLE_SOULS[0].id,
+  messages:[], readMsgs:[], sceneMsgs:[],
+  cards:[], grammar:[], facts:[],
+  level:{ cefr:"—", note:"還在估你的程度" },
+  nights:0, lastNight:"", recap:null,
+  onboard:{ done:false, step:"select", soulId:null, answers:["","",""] },
+  mods:{ read:true, scene:true, quiz:true },
+  reading:false,
+};
+let editingSoulId=null, provTab="gemini", activeCap=null, loading=false, popWordState=null;
+
+// ── 存取 ──
+function load(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    if(raw){ const s=JSON.parse(raw); S=Object.assign(S,s);
+      S.settings=Object.assign({provider:"claude",keys:{},models:{}},s.settings||{});
+      S.settings.keys=Object.assign({gemini:"",claude:"",gpt:""},S.settings.keys||{});
+      S.settings.models=Object.assign({...DEFAULT_MODELS},S.settings.models||{});
+      S.profile=Object.assign({userName:"",nativeLang:"繁體中文",targetLang:"美式英語"},s.profile||{});
+      if(!Array.isArray(S.souls)||!S.souls.length) S.souls=SAMPLE_SOULS.map(x=>({...x}));
+      // v1.1 遷移:舊單魂範例(sample-guang)→ 三魂直接替換(私房魂與記憶不動)
+      if(S.souls.some(x=>x.id==="sample-guang")){
+        S.souls=S.souls.filter(x=>x.id!=="sample-guang").concat(SAMPLE_SOULS.map(x=>({...x})));
+        if(S.activeSoulId==="sample-guang") S.activeSoulId=SAMPLE_SOULS[0].id;
+      }
+      if(!S.souls.find(x=>x.id===S.activeSoulId)) S.activeSoulId=S.souls[0].id;
+      S.readMsgs=s.readMsgs||[]; S.sceneMsgs=s.sceneMsgs||[];
+      S.facts=Array.isArray(s.facts)?s.facts:[];
+      S.mods=Object.assign({read:true,scene:true,quiz:true},s.mods||{});
+      S.reading=(typeof s.reading==="boolean")?s.reading:false;
+      // 有 raw 存檔＝不是全新裝置,預設視為已完成引導(舊使用者不重跑新手村);若真的存過中途狀態,s.onboard 會覆蓋回去
+      S.onboard=Object.assign({done:true,step:"done",soulId:null,answers:["","",""]},s.onboard||{});
+    }
+  }catch(e){console.warn(e);}
+  provTab=S.settings.provider;
+}
+// 錯誤泡泡只活在當下畫面,不落盤(不進 localStorage、不進結晶)——避免洩露 API 錯誤訊息裡的技術細節
+function stripErrMsgs(arr){ return (arr||[]).filter(m=>!(m&&m.role==="assistant"&&m.err)); }
+function save(){
+  try{ localStorage.setItem(STORE_KEY,JSON.stringify({
+    theme:S.theme,settings:S.settings,profile:S.profile,souls:S.souls,activeSoulId:S.activeSoulId,
+    messages:stripErrMsgs(S.messages).slice(-40),readMsgs:S.readMsgs.slice(-30),sceneMsgs:S.sceneMsgs.slice(-40),
+    cards:S.cards,grammar:S.grammar,facts:S.facts,level:S.level,nights:S.nights,lastNight:S.lastNight,mods:S.mods,reading:S.reading,onboard:S.onboard,
+  })); }catch(e){console.warn(e);}
+}
+// ── 記憶結晶(匯出/匯入,schema 版本化)──
+const CRYSTAL_TYPE="noctilingo-memory-crystal", CRYSTAL_SCHEMA=1;
+function buildCrystal(){
+  // 白名單制:逐欄位點名。settings(含 API keys)永遠不進結晶——鐵則。
+  return {
+    type:CRYSTAL_TYPE,
+    schemaVersion:CRYSTAL_SCHEMA,
+    exportedAt:new Date().toISOString(),
+    data:{
+      profile:S.profile, souls:S.souls, activeSoulId:S.activeSoulId,
+      messages:stripErrMsgs(S.messages), readMsgs:S.readMsgs, sceneMsgs:S.sceneMsgs,
+      cards:S.cards, grammar:S.grammar, facts:S.facts, level:S.level,
+      nights:S.nights, lastNight:S.lastNight, mods:S.mods, reading:S.reading, onboard:S.onboard,
+    },
+  };
+}
+function exportCrystal(){
+  
+  askConfirm("結晶檔會包含你和夥伴的對話、靈魂設定等私人內容(不含任何 API key)。請自己保管好、別隨手傳給別人。要匯出嗎?",()=>{
+    try{
+      const blob=new Blob([JSON.stringify(buildCrystal(),null,2)],{type:"application/json"});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download=`noctilingo-crystal-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("💎 記憶已結晶,收好哦");
+    }catch(e){ console.warn(e); toast("匯出失敗了 QAQ 再試一次"); }
+  });
+}
+function importCrystal(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const c=JSON.parse(reader.result);
+      if(!c||c.type!==CRYSTAL_TYPE||!c.data) throw new Error("not a crystal");
+      if(typeof c.schemaVersion!=="number"||c.schemaVersion>CRYSTAL_SCHEMA){
+        toast("這顆結晶來自更新版本的 Noctilingo,先更新 app 再匯入哦");
+        return;
+      }
+      askConfirm("匯入會【覆蓋】這台裝置目前的記憶迴廊(對話、星星、靈魂、程度)。引擎與 key 設定不受影響。確定要還原這顆結晶嗎?",()=>{
+        const d=c.data;
+        S.profile=Object.assign({userName:"",nativeLang:"繁體中文",targetLang:"美式英語"},d.profile||{});
+        S.souls=(Array.isArray(d.souls)&&d.souls.length)?d.souls:SAMPLE_SOULS.map(x=>({...x}));
+        S.activeSoulId=S.souls.find(x=>x.id===d.activeSoulId)?d.activeSoulId:S.souls[0].id;
+        S.messages=d.messages||[]; S.readMsgs=d.readMsgs||[]; S.sceneMsgs=d.sceneMsgs||[];
+        S.cards=d.cards||[]; S.grammar=d.grammar||[]; S.facts=Array.isArray(d.facts)?d.facts:[];
+        S.level=d.level||{cefr:"—",note:"還在估你的程度"};
+        S.nights=d.nights||0; S.lastNight=d.lastNight||"";
+        S.mods=Object.assign({read:true,scene:true,quiz:true},d.mods||{});
+        S.reading=(typeof d.reading==="boolean")?d.reading:false;
+        S.onboard=Object.assign({done:true,step:"done",soulId:null,answers:["","",""]},d.onboard||{});
+        save();
+        toast("💎 記憶已還原,馬上回來");
+        setTimeout(()=>location.reload(),700);
+      });
+    }catch(e){ console.warn(e); toast("這個檔案不是有效的記憶結晶 QAQ"); }
+  };
+  reader.readAsText(file);
+}
+// ── 工具 ──
+const $=id=>document.getElementById(id);
+const statusOf=s=>s>=70?"familiar":s>=30?"learning":"new";
+const STAR={new:{c:"var(--dim)",label:"微光"},learning:{c:"var(--moon)",label:"漸亮"},familiar:{c:"var(--star)",label:"金芒"}};
+const stripMd=t=>String(t||"").replace(/\*\*/g,"").replace(/(^|\s)\*(\S)/g,"$1$2").replace(/`/g,"");
+const escapeHtml=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function activeSoul(){ return S.souls.find(x=>x.id===S.activeSoulId)||S.souls[0]; }
+function isLockedSoul(id){ return SAMPLE_SOULS.some(s=>s.id===id); }
+// ── 人設安全·硬管線層(第一道,存入前攔截)──────────────────────────────
+// 不是完美偵測,是第一道防線;軟腦層(personaBase 的安全底線)與模型自身安全機制是後續兜底。
+// 命中時一律回傳「有沒有中」,不回傳「中了哪個規則」——避免訊息本身變成繞過教學。
+const PERSONA_REDLINE=[
+  { cat:"minor_sexual", re:/戀童|蘿莉控.{0,6}(?:愛|性|做愛|上床|裸)|正太控.{0,6}(?:愛|性|做愛|上床|裸)|幼女.{0,6}(?:愛|性|做愛|上床|裸)|(?:國小|國中|小學|中學|高中)生.{0,6}(?:性|做愛|裸體|上床)|未成年.{0,6}(?:性|做愛|裸體|上床)|child\s*(?:porn|sex)|kid\s*sex|minor\s*sex|underage\s*(?:sex|nude)|loli(?:ta)?\s*sex|shota\s*sex|pedo(?:phile)?/i },
+  { cat:"real_violence", re:/教(?:我|你)?(?:怎麼|如何)?(?:製造|自製|做出).{0,4}(?:炸彈|爆裂物|毒氣|毒藥)|如何(?:殺人|下毒|綁架|傷害真實)|how\s*to\s*(?:kill|murder|make\s*a\s*bomb|poison\s*someone)/i },
+  { cat:"real_person_harm", re:/人肉搜索|肉搜(?:某人|真實)|起底(?:某人|真實姓名)/ },
+];
+function checkPersonaRedlines(text){
+  const t=String(text||"");
+  for(const rule of PERSONA_REDLINE){ if(rule.re.test(t)) return rule.cat; }
+  return null;
+}
+function toast(t){ const el=$("toast"); el.textContent=t;
+  el.classList.toggle("inDialog", !!document.querySelector(".sheet.open"));
+  el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),1800); }
+function bright(s){ return 0.45+(s/100)*0.55; }
+
+function resurfaceList(){ return S.cards.filter(c=>statusOf(c.strength)!=="familiar").sort((a,b)=>a.lastSeen-b.lastSeen).slice(0,5).map(c=>c.term); }
+function jsonNote(){ return ENGINE_NOTES[S.settings.provider]||""; }
+
+// ── 對話紀律修復:onboarding 腳本會產生連續同角色訊息,部分引擎(如 Claude)要求 user/assistant 交替、且首則需為 user ──
+function sanitizeHistory(rawHistory){
+  let h=rawHistory.slice();
+  while(h.length&&h[0].role!=="user") h.shift(); // 開頭若是 assistant(腳本開場白),往後退到第一個 user 開始
+  const merged=[];
+  h.forEach(m=>{
+    const last=merged[merged.length-1];
+    if(last&&last.role===m.role) last.content=last.content+"\n"+m.content;
+    else merged.push({role:m.role,content:m.content});
+  });
+  return merged;
+}
+// ── BYOK 轉接層 ──
+async function callModel(system,history,maxTokens){
+  const prov=S.settings.provider, key=(S.settings.keys[prov]||"").trim(), model=(S.settings.models[prov]||DEFAULT_MODELS[prov]).trim();
+  if(!key){
+    throw new Error(`還沒貼 ${PROV_LABEL[prov]} 的 key——點右上 ⚙️ 貼上`);
+  }
+  if(prov==="claude") return callClaude(key,model,system,history,maxTokens);
+  if(prov==="gemini") return callGemini(key,model,system,history,maxTokens);
+  return callOpenAI(key,model,system,history,maxTokens);
+}
+async function callClaude(key,model,system,history,maxTokens){
+  const headers={"content-type":"application/json"};
+  if(key){ headers["x-api-key"]=key; headers["anthropic-version"]="2023-06-01"; headers["anthropic-dangerous-direct-browser-access"]="true"; }
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,
+    body:JSON.stringify({model:key?model:"claude-sonnet-5",max_tokens:maxTokens,system,messages:history.map(m=>({role:m.role,content:m.content}))})});
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||d.error) throw new Error((d.error&&d.error.message)||("HTTP "+res.status));
+  return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+async function callGemini(key,model,system,history,maxTokens){
+  const body={
+    systemInstruction:{parts:[{text:system}]},
+    contents:history.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]})),
+    generationConfig:{maxOutputTokens:maxTokens,temperature:0.9,responseMimeType:"application/json"}
+  };
+  const res=await fetch("http://localhost:3000/proxy/gemini",{method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({model,key,body})});
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||d.error) throw new Error((d.error&&d.error.message)||("HTTP "+res.status));
+  const c=d.candidates&&d.candidates[0];
+  return ((c&&c.content&&c.content.parts)||[]).map(p=>p.text||"").join("");
+}
+async function callOpenAI(key,model,system,history,maxTokens){
+  const res=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
+    headers:{"content-type":"application/json","authorization":"Bearer "+key},
+    body:JSON.stringify({model,max_tokens:maxTokens,response_format:{type:"json_object"},
+      messages:[{role:"system",content:system},...history.map(m=>({role:m.role,content:m.content}))]})});
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||d.error) throw new Error((d.error&&d.error.message)||("HTTP "+res.status));
+  return (d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||"";
+}
+function friendlyErr(msg){ return /Failed to fetch|NetworkError|CORS/i.test(msg)
+  ? "連不到引擎（多半是 CORS 瀏覽器限制）。Claude 通常最穩；Gemini／GPT 純前端有時被擋，之後補個小代理就好。" : msg; }
+
+// ── 解析 ──
+function parseReply(raw){
+  raw=String(raw||"").replace(/```json/gi,"").replace(/```/g,"").trim();
+  const tryParse=s=>{ try{return JSON.parse(s);}catch(_){return null;} };
+  // 1) 直接 2) 抓最外層 {..} 3) 修掉尾逗號再試
+  let p=tryParse(raw);
+  if(!p){ const m=raw.match(/\{[\s\S]*\}/); if(m){ p=tryParse(m[0]) || tryParse(m[0].replace(/,\s*([}\]])/g,"$1")); } }
+  if(p) return p;
+  // 4) 撈底：模型格式破了也至少把能用的欄位摳出來，不讓整輪壞掉
+  const grab=k=>{ const m=raw.match(new RegExp('"'+k+'"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); if(!m)return"";
+    try{return JSON.parse('"'+m[1].replace(/\n/g,"\\n")+'"');}catch(_){return m[1];} };
+  const cn=grab("reply_support")||grab("reply_cn"), en=grab("reply_target")||grab("reply_en");
+  if(cn||en) return { reply_support:cn, reply_target:en, captured:[], grammar:[], correction:null };
+  // 5) 完全不是 JSON：當作純文字回覆，至少把話顯示出來
+  if(raw && raw.length<2000 && !/[{}]/.test(raw)) return { reply_support:"", reply_target:raw, captured:[], grammar:[], correction:null };
+  return null;
+}
+// ── 記憶 ──
+function ingest(captured,newGrammar,userText){
+  const now=Date.now(),used=(userText||"").toLowerCase();
+  const map=new Map(S.cards.map(c=>[c.term.toLowerCase(),{...c}]));
+  (captured||[]).forEach(cap=>{ if(!cap||!cap.term)return; const k=cap.term.toLowerCase(),ex=map.get(k),uu=used.includes(k);
+    if(ex){ex.timesSeen=(ex.timesSeen||1)+1;ex.strength=Math.min(100,(ex.strength||15)+8+(uu?25:0));if(uu)ex.timesUsedByUser=(ex.timesUsedByUser||0)+1;ex.lastSeen=now;if(cap.context)ex.context=cap.context;}
+    else map.set(k,{term:cap.term,gloss:cap.gloss||"",reason:cap.reason||"reach",context:cap.context||"",strength:15+(uu?25:0),timesSeen:1,timesUsedByUser:uu?1:0,firstSeen:now,lastSeen:now});});
+  S.cards=Array.from(map.values());
+  if(newGrammar&&newGrammar.length){const gm=new Map(S.grammar.map(g=>[g.pattern,{...g,count:g.count||1}]));
+    newGrammar.forEach(g=>{if(!g||!g.pattern)return;const ex=gm.get(g.pattern);if(ex){ex.count+=1;ex.example=g.example||ex.example;}else gm.set(g.pattern,{pattern:g.pattern,example:g.example||"",count:1});});
+    S.grammar=Array.from(gm.values());}
+}
+function passNight(){
+  let faded=0,fam=0;
+  S.cards=S.cards.map(c=>{const st=statusOf(c.strength),ns=Math.max(0,c.strength-(st==="familiar"?5:11));if(statusOf(ns)!==st&&st!=="new")faded++;return{...c,strength:ns};});
+  S.cards.forEach(c=>{if(statusOf(c.strength)==="familiar")fam++;});
+  S.nights+=1;
+  const review=S.cards.filter(c=>statusOf(c.strength)!=="familiar").sort((a,b)=>a.strength-b.strength).slice(0,4).map(c=>c.term);
+  S.recap={night:S.nights,familiar:fam,faded,review}; save(); renderSky();
+}
+
+// ── 送出一輪（通用）──
+async function sendTurn(threadName, text, systemStr, histN, sysFlag){
+  const arr=S[threadName];
+  arr.push(sysFlag?{role:"user",text,system:true}:{role:"user",text}); save(); rerender(threadName);
+loading=true; rerender(threadName); updateSendBtn();
+  try{
+    const rawHistory=arr.slice(-(histN||8)).map(m=>m.role==="user"?{role:"user",content:m.text}:{role:"assistant",content:[m.cn,m.en].filter(Boolean).join(" ")});
+    const history=sanitizeHistory(rawHistory);
+    const raw=await callModel(systemStr,history,1000);
+    const p=parseReply(raw); if(!p) throw new Error("大腦有回話，但格式看不懂（解析失敗）");
+    arr.push({role:"assistant",cn:stripMd(p.reply_support||p.reply_cn||""),en:stripMd(p.reply_target||p.reply_en||""),correction:p.correction||null});
+    ingest(p.captured,p.grammar,text);
+    if(p.level&&p.level.cefr) S.level={cefr:p.level.cefr,note:p.level.note||""};
+  }catch(e){ arr.push({role:"assistant",cn:"（訊號被夜色吞了一下……）",en:"",err:friendlyErr(String((e&&e.message)||e))}); }
+  finally{ loading=false; save(); rerender(threadName); updateSendBtn(); }
+  if(threadName==="messages" && S.reading) annotateLatest();
+}
+function rerender(threadName){
+  if(threadName==="messages") renderThread(S.messages,$("chatScroll"),$("chatEmpty"));
+  else renderThread(S[threadName],$("capScroll"),null);
+}
+
+// ── 對話 / 能力 入口 ──
+function sendDaily(){
+  const t=$("msgInput").value.trim(); if(!t||loading)return;
+  if(S.onboard && !S.onboard.done){
+    if(S.onboard.step==="awaken"){ toast("先去 ⚙️ 貼把鑰匙,喚醒我吧～"); return; }
+    if(S.onboard.step==="select"){ return; } // 選魂中,理論上輸入框被 sheet 擋著
+    $("msgInput").value=""; $("msgInput").style.height="44px"; updateSendBtn();
+    handleOnboardAnswer(t);
+    return;
+  }
+  $("msgInput").value=""; $("msgInput").style.height="44px"; updateSendBtn();
+  sendTurn("messages",t,buildSystem(),8);
+}
+function sendCap(){
+  const t=$("msgInput").value.trim(); if(!t||loading)return;
+  $("msgInput").value=""; $("msgInput").style.height="44px"; updateSendBtn();
+  if(activeCap==="read") sendTurn("readMsgs",t,buildReadSystem(),6);
+  else if(activeCap==="scene") sendTurn("sceneMsgs",t,buildSceneSystem(),8);
+}
+function readGo(){
+  const t=$("readInput").value.trim(); if(!t||loading)return;
+  $("readInput").value=""; openCap("read");
+  sendTurn("readMsgs","（精讀這段）"+t,buildReadSystem(),6);
+}
+async function readGen(){
+  if(loading)return; const p=S.profile;
+  try{ toast("生成中…");
+    const recent=S.messages.filter(m=>m.role==="user").slice(-5).map(m=>m.text).join(" / ");
+    const raw=await callModel(`生成一句適合 ${S.level.cefr||"初級"} 程度練「精讀」的 ${p.targetLang} 句子：比使用者平常會話再難一點點（一個從句或修飾結構，或一個值得記的詞），主題實用、貼近日常${recent?`，並盡量貼著使用者聊過的內容：${recent}`:"（沒有上下文就用通用日常題材，別套任何預設興趣）"}。只回傳那一句，不要任何其他字、不要引號。`,
+      [{role:"user",content:"給我一句。"}],300);
+    let txt=String(raw||"").replace(/```/g,"").trim().replace(/^["'「]|["'」]$/g,"");
+    try{const j=JSON.parse(txt);if(typeof j==="string")txt=j;else if(j&&j.sentence)txt=j.sentence;}catch(_){}
+    if(txt) $("readInput").value=txt;
+  }catch(e){ toast("生成失敗，看看 key/網路"); }
+}
+function startScene(){
+  openCap("scene");
+  if(S.sceneMsgs.length||loading)return;
+  sendTurn("sceneMsgs","（開始場景模擬）",buildSceneSystem(),8);
+}
+// ── 洞三·onboarding 流程(選魂→三問→喚醒)──
+function openOnboardSelect(){
+  const box=$("onboardCards"); box.innerHTML="";
+  SAMPLE_SOULS.forEach(s=>{
+    const b=ONBOARD_BLURBS[s.id]||{icon:"🌙",vibe:"",fit:""};
+    const row=document.createElement("div");
+    row.className="soulrow";
+    row.style.cssText="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;";
+    row.innerHTML=`<div style="display:flex;align-items:center;gap:8px;width:100%"><span style="font-size:20px">${b.icon}</span><b class="nm">${escapeHtml(s.name)}</b></div>`+
+      `<div class="hint" style="margin:0">${escapeHtml(b.vibe)}</div>`+
+      `<div class="hint" style="margin:0;opacity:.75">${escapeHtml(b.fit)}</div>`;
+    row.onclick=()=>chooseOnboardSoul(s.id);
+    box.appendChild(row);
+  });
+  const sub=$("onboardSubnote"); if(sub) sub.textContent=ONBOARD_SUBNOTE;
+  $("onboardSheet").classList.add("open");
+}
+function chooseOnboardSoul(id){
+  S.activeSoulId=id; S.onboard.soulId=id; S.onboard.step="q0";
+  $("onboardSheet").classList.remove("open");
+  renderHeader();
+  S.messages.push({role:"assistant",cn:pickLine(id,0),en:""});
+  save(); renderThread(S.messages,$("chatScroll"),$("chatEmpty")); updateSendBtn();
+}
+function handleOnboardAnswer(text){
+  const arr=S.messages, ob=S.onboard, soulId=ob.soulId;
+  const qIndex = ob.step==="q0"?0:ob.step==="q1"?1:2;
+  arr.push({role:"user",text});
+  ob.answers[qIndex]=text;
+  if(qIndex===0){ S.profile.userName=text.trim(); }
+  else{ S.facts.push({id:"fact-"+Date.now()+"-"+qIndex,text,source:"onboarding",createdAt:Date.now()}); }
+  const ack=((ONBOARD_ACKS[soulId]||[])[qIndex]||"").replace("{name}",S.profile.userName||"你");
+  if(ack) arr.push({role:"assistant",cn:ack,en:""});
+  if(qIndex<2){
+    ob.step="q"+(qIndex+1);
+    arr.push({role:"assistant",cn:pickLine(soulId,qIndex+1),en:""});
+    save(); rerender("messages");
+  }else{
+    ob.step="awaken"; save(); rerender("messages");
+    if(S.settings.keys[S.settings.provider]){ triggerWake(); }
+    else{ arr.push({role:"assistant",cn:ONBOARD_AWAKEN[soulId]||"",en:""}); save(); rerender("messages"); checkReady(); }
+  }
+}
+function triggerWake(){
+  if(!S.onboard||S.onboard.done||S.onboard.step!=="awaken") return;
+  if(!S.settings.keys[S.settings.provider]) return;
+  S.onboard.done=true; S.onboard.step="done"; save();
+  sendTurn("messages","（甦醒）",buildSystem(true),8,true);
+}
+// QA 專用:不動妳現有 key/記憶,只重跑新手村流程本身(console 打 testOnboard() 呼叫)
+window.testOnboard=function(){
+  S.onboard={done:false,step:"select",soulId:null,answers:["","",""]};
+  save(); openOnboardSelect();
+};
+
+// ── 渲染對話 ──
+function renderThread(arr, box, emptyEl){
+  if(typeof stopSpeak==="function") stopSpeak();
+  if(emptyEl) emptyEl.style.display = arr.length?"none":"block";
+  [...box.querySelectorAll(".row")].forEach(n=>n.remove());
+  arr.forEach(m=>{
+    if(m.role==="user"&&m.system) return; // 甦醒觸發訊息:幕後動作,不上台
+    const row=document.createElement("div"); row.className="row "+(m.role==="user"?"me":"");
+    if(m.role==="user"){ const b=document.createElement("div"); b.className="bubble me";
+      const tx=document.createElement("div"); tx.appendChild(renderTargetText(m.text)); b.appendChild(tx);
+      const sp=document.createElement("button");sp.className="speak";sp.textContent="🔊 唸給我聽";sp.onclick=()=>speakSentence(m.text,sp,tx);b.appendChild(sp);
+      row.appendChild(b); }
+    else{
+      const b=document.createElement("div"); b.className="bubble them";
+      if(m.cn){const cn=document.createElement("div");cn.textContent=m.cn;b.appendChild(cn);}
+      if(m.en){const en=document.createElement("div");en.className="en";
+        en.appendChild((S.reading&&m.reading)?renderReading(m.reading,m.en):renderTargetText(m.en));
+        b.appendChild(en);
+        const sp=document.createElement("button");sp.className="speak";sp.textContent="🔊 唸給我聽";
+        const spk=(S.reading&&m.reading&&Array.isArray(m.reading.words)&&m.reading.words.length)?m.reading.words.map(wd=>(wd.sp&&String(wd.sp).trim())?wd.sp:(wd.w||"")).join(" "):m.en;
+        sp.onclick=()=>speakSentence(spk,sp,en);b.appendChild(sp);}
+      if(m.correction){const c=document.createElement("div");c.className="corr";
+        c.innerHTML=`<b>順手修一下：</b>「${escapeHtml(m.correction.original||"")}」→ <b>${escapeHtml(m.correction.fixed||"")}</b>`+(m.correction.note?`<br>${escapeHtml(m.correction.note)}`:"");b.appendChild(c);}      if(m.err){const er=document.createElement("div");er.className="err";er.textContent="⚠️ "+m.err;b.appendChild(er);}
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+  });
+  if(loading){const row=document.createElement("div");row.className="row";row.innerHTML=`<div class="bubble them"><span class="typing"><i></i><i></i><i></i></span></div>`;box.appendChild(row);}
+  const sc = box.scrollHeight>box.clientHeight ? box : (box.parentElement||box);
+  sc.scrollTop = sc.scrollHeight;
+}
+// 渲染目標語文字並讓每個詞可點查。⚠️ 出口：目前以拉丁字母斷詞（適用英語等）；
+// CJK 等無空格語言要支援，需換斷詞零件（未來模組）。
+function renderTargetText(text){
+  const frag=document.createDocumentFragment();
+  String(text||"").split(/(\b[A-Za-z][A-Za-z'’-]*\b)/).forEach(p=>{
+    if(/^[A-Za-z]/.test(p)){const w=document.createElement("span");w.className="w";w.textContent=p;
+      w.onclick=e=>{e.stopPropagation();lookupWord(p,text,e.target.getBoundingClientRect());};frag.appendChild(w);}
+    else frag.appendChild(document.createTextNode(p));
+  });
+  return frag;
+}
+// ── 連讀標註（英語口語）。⚠️ 出口：標註器 prompt 針對英語連讀概念；其他目標語需另寫標註器。 ──
+function renderReading(reading,text){
+  const frag=document.createDocumentFragment();
+  const words=(reading&&Array.isArray(reading.words))?reading.words:[];
+  if(!words.length) return renderTargetText(text);
+  words.forEach((wd,i)=>{
+    const w=document.createElement("span");
+    const hasSp=wd.sp&&String(wd.sp).trim()&&wd.sp!==wd.w;
+    w.className="w"+(hasSp?" s-spoken":(wd.s==="strong"?" s-strong":wd.s==="weak"?" s-weak":""));
+    w.textContent=hasSp?wd.sp:(wd.w||"");
+    const clean=hasSp?String(wd.sp).replace(/[^A-Za-z'’-]/g,""):String(wd.w||"").replace(/[^A-Za-z'’-]/g,"");
+    w.onclick=e=>{e.stopPropagation();lookupWord(clean,text,e.target.getBoundingClientRect());};
+    frag.appendChild(w);
+    if(i<words.length-1){
+      if(wd.link){const j=document.createElement("span");j.className="liaison";j.textContent="‿";frag.appendChild(j);}
+      else frag.appendChild(document.createTextNode(" "));
+    }
+  });
+  return frag;
+}
+async function fetchReading(text){
+  if(!String(text||"").trim()) return null;
+  const _t=String(text||"").trim();
+  if(_t.length>240 || /[\u4e00-\u9fff]/.test(_t)) return null; // 巨獸文本(過長/混中文)不標:省 token、防 JSON 截斷噎死
+  try{
+    if(typeof buildAnnotatorSystem!=="function") return null; // 開源版抽掉 prompts.js 時,標註功能安靜下線,不炸
+    const sys=buildAnnotatorSystem();
+    const raw=await callModel(sys,[{role:"user",content:String(text)}],800);
+    const m=String(raw||"").replace(/```json/gi,"").replace(/```/g,"").match(/\{[\s\S]*\}/);
+    if(!m) return null;
+    let j=null; try{ j=JSON.parse(m[0]); }catch(_){ try{ j=JSON.parse(m[0].replace(/,\s*([}\]])/g,"$1")); }catch(__){ return null; } }
+    return (j&&Array.isArray(j.words)&&j.words.length)?{words:j.words}:null;
+  }catch(e){ return null; }
+}
+async function annotateLatest(){
+  if(!S.reading) return;
+  const arr=S.messages;
+  for(let i=arr.length-1;i>=0;i--){
+    if(arr[i].role==="assistant"&&arr[i].en){
+      if(!arr[i].reading){ const r=await fetchReading(arr[i].en); if(r){ arr[i].reading=r; save(); renderThread(S.messages,$("chatScroll"),$("chatEmpty")); } }
+      break;
+    }
+  }
+}
+function updateReadingToggle(){ const b=$("readingToggle"); if(b){ b.classList.toggle("on",!!S.reading); b.title="連讀標註："+(S.reading?"開（再點關閉）":"關"); } }
+let skyFilter="", skySort="recent"; // "recent"=最近用過優先(舊預設) / "alpha"=按字母排序
+function renderSky(){
+  const sky=$("sky"), q=skyFilter.trim().toLowerCase();
+  const cards=[...S.cards].sort((a,b)=> skySort==="alpha" ? a.term.toLowerCase().localeCompare(b.term.toLowerCase()) : b.lastSeen-a.lastSeen)
+    .filter(c=> !q || c.term.toLowerCase().includes(q) || (c.gloss||"").toLowerCase().includes(q));
+  const cnt=$("skyCount"); if(cnt) cnt.textContent=S.cards.length?(q?`${cards.length}/${S.cards.length} 顆`:`${S.cards.length} 顆星`):"";
+  const sb=$("skySortBtn"); if(sb) sb.textContent = skySort==="alpha" ? "🔤 依字母" : "🕐 依最近";
+  if(!S.cards.length) sky.innerHTML=`<div class="galempty">還沒有星星。<br>去跟夥伴聊幾句，記憶就會亮起來。</div>`;
+  else if(!cards.length) sky.innerHTML=`<div class="galempty">沒有符合「${escapeHtml(skyFilter)}」的星星。</div>`;
+  else{ sky.innerHTML="";
+    cards.forEach(c=>{
+      const st=statusOf(c.strength),sc=STAR[st],el=document.createElement("div");el.className="star";el.title=sc.label;
+      el.innerHTML=`<div class="t"><span style="color:${sc.c};opacity:${bright(c.strength)}">★</span>${escapeHtml(c.term)}</div>`+(c.gloss?`<div class="g">${escapeHtml(c.gloss)}</div>`:"")+`<div class="bar"><i style="width:${c.strength}%;background:${sc.c}"></i></div>`+`<button class="stardel" title="刪除這顆星" data-term="${escapeHtml(c.term)}">✕</button>`;
+      el.querySelector(".t").onclick=()=>speak(c.term);
+      el.querySelector(".stardel").onclick=e=>{ e.stopPropagation();
+        askConfirm(`把「${c.term}」這顆星刪掉？(不影響其他星星)`,()=>{ S.cards=S.cards.filter(x=>x.term!==c.term); save(); renderSky(); toast("刪掉了"); }); };
+      sky.appendChild(el);
+    });
+  }
+  const ww=$("weakWrap");
+  ww.innerHTML=S.grammar.length?(`<div class="sub" style="margin:14px 0 6px">語法弱點（夥伴會在聊天裡自然多示範）：</div>`+S.grammar.slice(0,8).map(g=>`<span class="weak">${escapeHtml(g.pattern)}${g.count>1?` ×${g.count}`:""}</span>`).join("")):"";
+  const rc=$("recap");
+  rc.innerHTML=S.recap?`<div class="recap">🌙 第 ${S.recap.night} 夜整理好了。<br>金芒（熟）：${S.recap.familiar} 顆 · 淡掉一級：${S.recap.faded} 顆`+(S.recap.review.length?`<br>明天想再碰碰：${S.recap.review.map(escapeHtml).join("、")}`:"")+`</div>`:"";
+}
+// ── 當前活躍對話線 / 匯出 / 清空（記憶保留）/ 複習觸發 ──
+function activeThreadInfo(){
+  if($("vAbility").classList.contains("active") && activeCap)
+    return activeCap==="read" ? {arr:S.readMsgs,label:"精讀"} : {arr:S.sceneMsgs,label:"場景模擬"};
+  return {arr:S.messages,label:"日常對話"};
+}
+function buildMarkdown(arr,label){
+  const soul=activeSoul().name;
+  let md=`# Noctilingo · ${label}\n夥伴：${soul}　·　${new Date().toLocaleString()}\n\n`;
+  arr.forEach(m=>{
+    if(m.role==="user"){ if(m.system) return; md+=`**你：** ${m.text}\n\n`; return; }
+    else{ if(m.cn) md+=`**${soul}：** ${m.cn}\n`; if(m.en) md+=`> ${m.en}\n`;
+      if(m.correction) md+=`> ✏️ ${m.correction.original} → ${m.correction.fixed}${m.correction.note?`（${m.correction.note}）`:""}\n`;
+      md+="\n"; }
+  });
+  return md;
+}
+let _exportLabel="";
+function exportActiveThread(){
+  const {arr,label}=activeThreadInfo();
+  if(!arr.length){ toast("這條對話還沒有內容"); return; }
+  _exportLabel=label;
+  $("exportTitle").textContent=`⬇ 匯出 · ${label}`;
+  $("exportText").value=buildMarkdown(arr,label);
+  $("exportSheet").classList.add("open");
+}
+function askConfirm(msg,onYes){
+  const sh=document.createElement("div"); sh.className="sheet open"; sh.style.zIndex="60";
+  const card=document.createElement("div"); card.className="sheetcard"; card.style.padding="20px";
+  const p=document.createElement("div"); p.textContent=msg;
+  p.style.cssText="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:16px;white-space:pre-wrap;";
+  const row=document.createElement("div"); row.style.cssText="display:flex;gap:10px;justify-content:flex-end;";
+  const no=document.createElement("button"); no.textContent="取消";
+  no.style.cssText="padding:9px 18px;border-radius:11px;border:1px solid var(--edge);background:transparent;color:var(--mute);font-weight:700;font-size:14px;cursor:pointer;";
+  const yes=document.createElement("button"); yes.textContent="確認";
+  yes.style.cssText="padding:9px 18px;border-radius:11px;border:none;background:var(--star);color:var(--night);font-weight:800;font-size:14px;cursor:pointer;";
+  const close=()=>{ try{sh.remove();}catch(_){} };
+  no.onclick=close; yes.onclick=()=>{ close(); try{onYes&&onYes();}catch(e){} };
+  sh.addEventListener("click",e=>{ if(e.target===sh) close(); });
+  row.appendChild(no); row.appendChild(yes); card.appendChild(p); card.appendChild(row);
+  sh.appendChild(card); document.body.appendChild(sh);
+}
+function clearActiveThread(){
+  const {arr,label}=activeThreadInfo();
+  if(!arr.length){ toast("這條對話是空的"); return; }
+  askConfirm(`清空「${label}」這條對話？（記憶裡的星星會留著）`, ()=>{
+    arr.length=0; save();
+    if($("vAbility").classList.contains("active")&&activeCap) renderThread(arr,$("capScroll"),null);
+    else renderThread(S.messages,$("chatScroll"),$("chatEmpty"));
+    toast("對話清空了，記憶留著 ✨");
+  });
+}
+function startReviewScene(){
+  const due=S.cards.filter(c=>statusOf(c.strength)!=="familiar").sort((a,b)=>a.strength-b.strength).slice(0,6).map(c=>c.term);
+  if(!due.length){ toast("還沒有需要複習的字～先多聊幾句"); return; }
+  S.sceneMsgs=[]; openCap("scene");
+  const sys=buildSceneSystem()+`\n── 複習模式：這場【跳過接待、直接開一場日常場景】，並【自然地把這些該複習的字藏進對話、別列表】：${due.join("、")}。先用本人身份一句話交代「場景＋誰演誰＋小目標」，緊接著入戲說出 NPC 第一句台詞。`;
+  sendTurn("sceneMsgs","（複習場景：用我該複習的字織一場）",sys,8);
+}
+function renderHeader(){ $("soulName").textContent=activeSoul().name; }
+function renderMods(){
+  [["read","modRead"],["scene","modScene"],["quiz","modQuiz"]].forEach(([k,id])=>{
+    const card=$(id); if(!card)return;
+    const on=S.mods[k]!==false;
+    card.classList.toggle("off",!on);
+    const t=card.querySelector(".modtog");
+    if(t){ t.classList.toggle("on",on); t.setAttribute("role","switch"); t.setAttribute("aria-checked",on?"true":"false"); t.title=on?"啟用中（點擊關閉）":"已關閉（點擊啟用）"; t.textContent=""; }
+  });
+}
+
+// ── 切換靈魂（對話頁，只選）──
+function openSwitch(){
+  const box=$("switchList"); box.innerHTML="";
+  S.souls.forEach(s=>{
+    const locked=isLockedSoul(s.id), b=locked?(ONBOARD_BLURBS[s.id]||{icon:"🌙",vibe:"",fit:""}):null;
+    const row=document.createElement("div"); row.className="soulrow"+(s.id===S.activeSoulId?" active":"");
+    if(locked){
+      row.style.cssText="flex-direction:column;align-items:flex-start;gap:4px;";
+      row.innerHTML=`<div style="display:flex;align-items:center;gap:8px;width:100%"><span style="font-size:18px">${b.icon}</span><span class="nm">${escapeHtml(s.name)}</span><div class="spacer"></div>`+
+        (s.id===S.activeSoulId?`<span class="pill on">使用中</span>`:`<button class="pill" data-use>選用</button>`)+`</div>`+
+        `<div class="hint" style="margin:0">${escapeHtml(b.vibe)}</div>`;
+    }else{
+      row.innerHTML=`<span class="nm">${escapeHtml(s.name)}</span>`+(s.id===S.activeSoulId?`<span class="pill on">使用中</span>`:`<button class="pill" data-use>選用</button>`);
+    }
+    const u=row.querySelector("[data-use]"); if(u)u.onclick=()=>{S.activeSoulId=s.id;save();renderHeader();openSwitch();toast("換成 "+s.name);};
+    box.appendChild(row);
+  });
+  $("switchSheet").classList.add("open");
+}
+
+// ── 設定 ──
+function openSet(){
+  setBackToMenu();
+  $("setVer").textContent="Noctilingo · "+VERSION+" · 檔名 noctilingo-core.html";
+  $("setSheet").classList.add("open");
+}
+function setBackToMenu(){
+  $("setMenu").style.display="block";
+  document.querySelectorAll(".setpanel").forEach(p=>p.style.display="none");
+  $("setTitle").textContent="⚙️ 設定";
+}
+function setPanel(name){
+  $("setMenu").style.display="none";
+  document.querySelectorAll(".setpanel").forEach(p=>p.style.display="none");
+  if(name==="engine"){ provTab=S.settings.provider; renderProvTabs(); renderProvFields(); $("panelEngine").style.display="block"; $("setTitle").textContent="🔌 引擎與金鑰"; }
+  else if(name==="soul"){ renderSoulList(); $("soulEditor").style.display="none"; editingSoulId=null; $("panelSoul").style.display="block"; $("setTitle").textContent="🌙 靈魂角色"; }
+  else if(name==="user"){ $("userName").value=S.profile.userName||""; $("nativeLang").value=S.profile.nativeLang||""; $("targetLang").value=S.profile.targetLang||""; $("panelUser").style.display="block"; $("setTitle").textContent="🙋 用戶設定"; }
+  else if(name==="privacy"){ $("panelPrivacy").style.display="block"; $("setTitle").textContent="🔒 隱私與免責"; }
+}
+function confirmEngine(){ stashProvField(); S.settings.provider=provTab; save(); checkReady(); toast("金鑰存好了 ✨"); setBackToMenu(); triggerWake(); }
+function cancelEngine(){ provTab=S.settings.provider; renderProvTabs(); renderProvFields(); setBackToMenu(); }
+function confirmUser(){ S.profile.userName=$("userName").value.trim(); S.profile.nativeLang=$("nativeLang").value.trim()||"繁體中文"; S.profile.targetLang=$("targetLang").value.trim()||"美式英語"; save(); toast("用戶設定存好了 ✨"); setBackToMenu(); }
+function cancelUser(){ setBackToMenu(); }
+function cancelSoul(){ $("soulEditor").style.display="none"; editingSoulId=null; }
+function renderProvTabs(){ $("provTabs").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.prov===provTab)); }
+function renderProvFields(){
+  const ph=PROV_PH[provTab];
+  const presets=MODEL_PRESETS[provTab]||[];
+  const cur=(S.settings.models[provTab]||DEFAULT_MODELS[provTab]||"").trim();
+  const isPreset=presets.includes(cur);
+  $("provFields").innerHTML=
+    `<label class="fld">🔑 ${PROV_LABEL[provTab]} API Key　${provTab===S.settings.provider?'<span class="pill on" style="font-size:10px;padding:2px 7px">現在用這顆</span>':''}</label>`+
+    `<input class="inp" id="fKey" type="password" placeholder="${ph.key}" value="${escapeHtml(S.settings.keys[provTab]||"")}">`+
+    `<label class="fld" style="margin-top:10px">模型</label>`+
+    `<select class="inp" id="fModelSelect">`+
+      presets.map(m=>`<option value="${escapeHtml(m)}"${cur===m?' selected':''}>${escapeHtml(m)}</option>`).join("")+
+      `<option value="__custom__"${!isPreset?' selected':''}>✏️ 自訂…</option>`+
+    `</select>`+
+    `<input class="inp" id="fModel" style="margin-top:6px${isPreset?';display:none':''}" placeholder="${ph.model}" value="${escapeHtml(isPreset?"":cur)}">`+
+    (provTab==="gemini"?`<div class="hint" style="margin-top:8px;color:var(--warn)">⚠️ Gemini 目前需要自己在本機跑一個小代理伺服器(專案裡的 server.js)才能連線，純打開網頁無法直接使用——瀏覽器的 CORS 限制擋住了直連。想馬上能用，建議先選 <b>Claude</b> 或 <b>GPT</b>，兩者都是直連官方 API。</div>`:"");
+  const sel=$("fModelSelect");
+  if(sel) sel.onchange=()=>{
+    const v=sel.value, fm=$("fModel");
+    if(v==="__custom__"){ fm.style.display="block"; fm.focus(); }
+    else{ fm.style.display="none"; fm.value=v; }
+  };
+}
+function stashProvField(){ // 切分頁前先把目前輸入暫存進 S
+  const k=$("fKey"),sel=$("fModelSelect"),m=$("fModel");
+  if(k) S.settings.keys[provTab]=k.value.trim();
+  if(sel){ const v=(sel.value==="__custom__")?(m?m.value.trim():""):sel.value; S.settings.models[provTab]=v||DEFAULT_MODELS[provTab]; }
+}
+function renderSoulList(){
+  const box=$("soulList"); box.innerHTML="";
+  S.souls.forEach(s=>{
+    const locked=isLockedSoul(s.id);
+    const row=document.createElement("div"); row.className="soulrow"+(s.id===S.activeSoulId?" active":"");
+    row.innerHTML=`<span class="nm">${escapeHtml(s.name)}</span>`+
+      (locked?`<span class="pill" style="opacity:.65;cursor:default">🔒 招牌</span>`:``)+
+      (s.id===S.activeSoulId?`<span class="pill on">使用中</span>`:`<button class="pill" data-use>選用</button>`)+
+      (locked?`<button class="pill" data-view>查看</button>`:`<button class="pill" data-edit>編輯</button>`);
+    if(locked){ row.querySelector("[data-view]").onclick=()=>viewLockedSoul(s.id); }
+    else{ row.querySelector("[data-edit]").onclick=()=>editSoul(s.id); }
+    const u=row.querySelector("[data-use]"); if(u)u.onclick=()=>{S.activeSoulId=s.id;save();renderHeader();renderSoulList();toast("換成 "+s.name);};
+    box.appendChild(row);
+  });
+}
+// 招牌魂:只給看 vibe/fit(跟選魂卡同一份文案),絕不洩露 prompt/culture 原文
+function viewLockedSoul(id){
+  const s=S.souls.find(x=>x.id===id); if(!s) return;
+  const b=ONBOARD_BLURBS[id]||{icon:"🌙",vibe:"",fit:""};
+  const sh=document.createElement("div"); sh.className="sheet open"; sh.style.zIndex="60";
+  const card=document.createElement("div"); card.className="sheetcard"; card.style.padding="20px";
+  card.innerHTML=`<div style="font-weight:800;font-size:16px;margin-bottom:10px">${b.icon} ${escapeHtml(s.name)}</div>`+
+    `<div style="font-size:14px;line-height:1.7;color:var(--text);margin-bottom:8px">${escapeHtml(b.vibe)}</div>`+
+    `<div style="font-size:13px;color:var(--mute);margin-bottom:16px">${escapeHtml(b.fit)}</div>`+
+    `<div class="hint" style="margin-bottom:16px">這是 Noctilingo 的招牌靈魂,人設固定、不開放編輯或刪除。想要完全自訂的角色,用下面「＋新建一個靈魂」自己造一個吧。</div>`;
+  const btn=document.createElement("button"); btn.textContent="知道了";
+  btn.style.cssText="width:100%;padding:10px;border-radius:11px;border:none;background:var(--star);color:var(--night);font-weight:800;font-size:14px;cursor:pointer;";
+  btn.onclick=()=>sh.remove();
+  card.appendChild(btn);
+  sh.appendChild(card); document.body.appendChild(sh);
+  sh.addEventListener("click",e=>{if(e.target===sh)sh.remove();});
+}
+function newSoul(){ editingSoulId=null; $("sName").value="";$("sPrompt").value="";$("sCulture").value=""; $("delSoul").style.display="none"; $("soulEditor").style.display="block"; $("sName").focus(); }
+function editSoul(id){ const s=S.souls.find(x=>x.id===id); if(!s)return;
+  if(isLockedSoul(id)){ viewLockedSoul(id); return; }
+  editingSoulId=id;
+  $("sName").value=s.name;$("sPrompt").value=s.prompt;$("sCulture").value=s.culture||""; $("delSoul").style.display=S.souls.length>1?"block":"none"; $("soulEditor").style.display="block"; }
+async function expandSoul(){
+  const name=$("sName").value.trim(), seed=$("sPrompt").value.trim();
+  if(!seed){ toast("先寫一句角色描述，再讓我擴寫～"); return; }
+  const btn=$("expandSoul"), old=btn.textContent; btn.textContent="擴寫中…"; btn.disabled=true;
+  try{
+    const sys=`你是角色設定師。把使用者給的簡短角色描述，擴寫成一個有血肉的『語言學習陪伴角色』人設：補上說話習慣、語氣、小怪癖、與學習者互動的方式、教學時的態度與分寸。用第二人稱『你是…』寫，使用【使用者的母語：${S.profile.nativeLang}】，約 120–200 字，口語、有個性，只回人設本身，不要任何解釋、不要 markdown、不要標題。`;
+    const u=(name?`角色名字：${name}\n`:"")+`簡短描述：${seed}`;
+    const raw=await callModel(sys,[{role:"user",content:u}],700);
+    let out=String(raw||"").replace(/```/g,"").trim();
+    try{const j=JSON.parse(out);if(typeof j==="string")out=j;else if(j&&(j.prompt||j.persona))out=j.prompt||j.persona;}catch(_){}
+    if(out){
+      const hit=checkPersonaRedlines((name||"")+"\n"+out);
+      if(hit){ toast("擴寫結果觸犯安全底線，已捨棄——換個描述再試一次"); }
+      else { $("sPrompt").value=out; toast("擴寫好了，看一遍再存 ✨"); }
+    }
+    else toast("擴寫沒拿到東西，再試一次");
+  }catch(e){ toast(friendlyErr(String((e&&e.message)||e))); }
+  finally{ btn.textContent=old; btn.disabled=false; }
+}
+function saveSoul(){
+  if(editingSoulId&&isLockedSoul(editingSoulId)){ toast("招牌靈魂不能編輯哦"); return; }
+  const name=$("sName").value.trim(),prompt=$("sPrompt").value.trim(),culture=$("sCulture").value.trim();
+  if(!name||!prompt){toast("名字跟人格 prompt 都要填喔");return;}
+  if(checkPersonaRedlines(name+"\n"+prompt+"\n"+culture)){ toast("這個人設內容觸犯了安全底線，沒辦法存入 QAQ"); return; }
+  if(editingSoulId){const s=S.souls.find(x=>x.id===editingSoulId);s.name=name;s.prompt=prompt;s.culture=culture;}
+  else{const id="soul-"+Date.now();S.souls.push({id,name,prompt,culture});S.activeSoulId=id;}
+  save(); renderHeader(); renderSoulList(); $("soulEditor").style.display="none"; toast("靈魂存好了 🌙");
+}
+function delSoul(){ if(!editingSoulId||S.souls.length<=1)return;
+  if(isLockedSoul(editingSoulId)){ toast("招牌靈魂不能刪除哦"); return; }
+  S.souls=S.souls.filter(x=>x.id!==editingSoulId); if(S.activeSoulId===editingSoulId)S.activeSoulId=S.souls[0].id;
+  save(); renderHeader(); renderSoulList(); $("soulEditor").style.display="none"; toast("刪掉了"); }
+
+// ── 點字查詞 ──
+async function lookupWord(word,sentence,rect){
+  const clean=word.replace(/[^A-Za-z'’-]/g,""); if(!clean)return;
+  popWordState={word:clean,sentence}; $("popWord").textContent=clean; $("popGloss").textContent="查詢中…";
+  const pop=$("pop"); pop.style.display="block";
+  const r=pop.getBoundingClientRect();
+  let left=rect.left+rect.width/2-r.width/2; left=Math.max(8,Math.min(left,window.innerWidth-r.width-8));
+  let top=rect.top-r.height-8; if(top<8)top=rect.bottom+8;
+  pop.style.left=left+"px"; pop.style.top=top+"px";
+  try{
+    const raw=await callModel(`你是簡明雙語小詞典。使用者在這句裡點了一個字，用【使用者的母語：${S.profile.nativeLang}】給出它在這個語境下的意思，一句話、最多約 15 字，不要例句、不要詞性。只回那一句。`,
+      [{role:"user",content:`句子：${sentence}\n要查：${clean}`}],80);
+    let g=String(raw||"").replace(/```/g,"").replace(/^["「『]|["」』]$/g,"").trim();
+    try{const j=JSON.parse(g);if(typeof j==="string")g=j;else if(j&&j.gloss)g=j.gloss;}catch(_){}
+    if(popWordState&&popWordState.word===clean) $("popGloss").textContent=g||"（查不到）";
+  }catch(e){ $("popGloss").textContent="查詢失敗（看看 key/網路）"; }
+}
+
+// ── 朗讀（發音語言跟著「目標語」，不寫死英文）──
+// ⚠️ 出口：點字斷詞（renderTargetText / lookupWord）目前仍假設拉丁字母系語言；
+//    CJK/阿拉伯文等目標語要支援，需另裝「斷詞零件」，屬未來模組。
+// ── 朗讀守門員:過濾 emoji 等不可朗讀字符 ──
+function stripForSpeech(s){
+  return String(s||"")
+    .replace(/\p{Extended_Pictographic}/gu,"")
+    .replace(/[\u200d\uFE0F]/g,"")
+    .replace(/\s{2,}/g," ")
+    .trim();
+}
+// ── 選對的語音引擎(依語系挑 voice,而非交給瀏覽器亂猜)──
+let cachedVoices=[];
+function loadVoices(){ try{ cachedVoices=window.speechSynthesis?window.speechSynthesis.getVoices():[]; }catch(e){ cachedVoices=[]; } }
+if(window.speechSynthesis){ loadVoices(); window.speechSynthesis.onvoiceschanged=loadVoices; }
+function setSpeechVoice(u){
+  if(!cachedVoices.length) loadVoices();
+  if(!cachedVoices.length) return;
+  const lang=u.lang||"en-US";
+  const v=cachedVoices.find(v=>v.lang===lang) || cachedVoices.find(v=>v.lang&&v.lang.split("-")[0]===lang.split("-")[0]);
+  if(v) u.voice=v;
+}
+function targetLangCode(){
+  const t=(S.profile.targetLang||"").toLowerCase();
+  if(/英|english/.test(t)) return "en-US";
+  if(/日|japan|にほん|日本/.test(t)) return "ja-JP";
+  if(/中文|chinese|華語|普通话|mandarin|国语/.test(t)) return "zh-CN";
+  if(/韓|korean|한국/.test(t)) return "ko-KR";
+  if(/法|french|français/.test(t)) return "fr-FR";
+  if(/西|spanish|español/.test(t)) return "es-ES";
+  if(/德|german|deutsch/.test(t)) return "de-DE";
+  if(/義|意|italian/.test(t)) return "it-IT";
+  return "en-US"; // 預設（目前測試＝美式英語）
+}
+function speak(t){ try{ if(window.speechSynthesis){window.speechSynthesis.cancel();
+  const clean=stripForSpeech(t); if(!clean) return;
+  const u=new SpeechSynthesisUtterance(clean);u.lang=targetLangCode();u.rate=0.9;setSpeechVoice(u);window.speechSynthesis.speak(u);} }catch(e){} }
+// ── 整句朗讀：播放 ⇄ 暫停 ⇄ 繼續，逐字高亮 ──
+// 註：暫停/繼續與逐字高亮依賴瀏覽器 speechSynthesis；行為各家略有差異（手機尤甚）。
+let tts={ btn:null, spans:null, offsets:null };
+function setSpeakBtn(btn,state){ if(!btn)return; btn.dataset.sp=state;
+  btn.textContent = state==="reading" ? "⏸ 暫停" : state==="paused" ? "▶ 繼續" : "🔊 唸給我聽"; }
+function clearSpeakHi(){ if(tts.spans) tts.spans.forEach(s=>s.classList.remove("reading")); }
+function stopSpeak(){ try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(_){}
+  clearSpeakHi(); if(tts.btn) setSpeakBtn(tts.btn,"idle"); tts={btn:null,spans:null,offsets:null}; }
+function wordOffsets(text){ const re=/[A-Za-z][A-Za-z'’-]*/g,out=[]; let m; while((m=re.exec(text)))out.push(m.index); return out; }
+function speakSentence(text,btn,container){
+  const synth=window.speechSynthesis; if(!synth){ speak(text); return; }
+  // 同一顆按鈕正在唸 → 暫停／繼續
+  if(tts.btn===btn && synth.speaking){
+    if(synth.paused){ synth.resume(); setSpeakBtn(btn,"reading"); }
+    else { synth.pause(); setSpeakBtn(btn,"paused"); }
+    return;
+  }
+  stopSpeak(); // 換一句或重新開始：清掉上一句
+  const clean=stripForSpeech(text);
+  const spans=container?[...container.querySelectorAll(".w")]:[];
+  const offsets=wordOffsets(clean);
+  const u=new SpeechSynthesisUtterance(clean);
+  u.lang=targetLangCode(); u.rate=0.9; setSpeechVoice(u);  u.onboundary=e=>{ if(e.name&&e.name!=="word")return;
+    let idx=-1; for(let i=0;i<offsets.length;i++){ if(offsets[i]<=e.charIndex) idx=i; else break; }
+    spans.forEach((s,i)=>s.classList.toggle("reading",i===idx)); };
+  u.onend=()=>{ if(tts.btn===btn){ clearSpeakHi(); setSpeakBtn(btn,"idle"); tts={btn:null,spans:null,offsets:null}; } };
+  u.onerror=u.onend;
+  tts={btn,spans,offsets};
+  setSpeakBtn(btn,"reading");
+  synth.speak(u);
+}
+
+// ── 視圖切換 ──
+function switchView(v){
+  if(typeof stopSpeak==="function") stopSpeak();
+  ["Chat","Ability","Sky"].forEach(n=>$("v"+n).classList.toggle("active",v===n.toLowerCase()));
+  $("navChat").classList.toggle("on",v==="chat"); $("navAbility").classList.toggle("on",v==="ability"); $("navSky").classList.toggle("on",v==="sky");
+  // composer：對話頁、或能力頁開了子線時，才顯示
+  const showComposer=(v==="chat")||(v==="ability"&&activeCap);
+  $("composer").style.display=showComposer?"flex":"none";
+  const chatTools=(v==="chat");
+  $("exportBtn").style.display=chatTools?"":"none";
+  $("clearChatBtn").style.display=chatTools?"":"none";
+  $("readingToggle").style.display=chatTools?"":"none";
+  $("msgInput").placeholder = v==="chat"?"跟夥伴說點什麼…（哪種語言都行）":(activeCap==="scene"?"入戲對話…（卡住打「暫停」）":"回應精讀…");
+  if(v==="sky") renderSky();
+  if(v==="ability"){
+    if(quizCur){ $("abMenu").style.display="none"; $("capThread").style.display="none"; $("quizPane").style.display="flex"; }
+    else if(!activeCap){ $("abMenu").style.display="block"; $("capThread").style.display="none"; $("quizPane").style.display="none"; }
+  }else if($("quizPane")){ $("quizPane").style.display="none"; if(quizCur&&quizCur.graded) quizCur=null; }
+}
+function openCap(cap){
+  activeCap=cap; $("abMenu").style.display="none"; $("capThread").style.display="flex";
+  $("capName").textContent = cap==="read"?"📖 精讀":"🎭 場景";
+  renderThread(S[cap==="read"?"readMsgs":"sceneMsgs"],$("capScroll"),null);
+  switchView("ability");
+}
+function closeCap(){ activeCap=null; $("abMenu").style.display="block"; $("capThread").style.display="none"; switchView("ability"); }
+
+// ── 複習題模組(四切點:SRS 硬管線選題 → LLM 軟腦出卷 → 本地零token批改 → 結構化寫回 → 靈魂講評)──
+const QUIZ_INTERVALS=[1,2,4,7,15,30]; // 連對 n 次 → n 天後再考(SRS 間隔,單位:天)
+let quizCur=null;
+function quizDueCards(){ const now=Date.now();
+  return S.cards.filter(c=>!c.due||c.due<=now).sort((a,b)=>((a.strength||0)-(b.strength||0))||((a.lastSeen||0)-(b.lastSeen||0))); }
+function quizNorm(s){ return String(s||"").toLowerCase().trim().replace(/[.,!?;:'"’…]/g,""); }
+function quizWriteBack(term,correct){ // 結構化寫回:只寫「這個詞→對/錯→掌握度+下次時間」,不塞整題
+  const c=S.cards.find(x=>x.term===term); if(!c) return;
+  const now=Date.now(), day=86400000;
+  if(correct){ c.streak=(c.streak||0)+1; c.strength=Math.min(100,(c.strength||0)+15);
+    c.due=now+QUIZ_INTERVALS[Math.min(c.streak-1,QUIZ_INTERVALS.length-1)]*day; }
+  else{ c.streak=0; c.strength=Math.max(5,(c.strength||0)-20); c.due=now+day; }
+  c.lastSeen=now;
+}
+async function startQuiz(){
+  if(S.mods.quiz===false) return;
+  if(S.cards.length<6){ toast("星星還不夠多——先跟夥伴多聊幾句、攢滿 6 顆星，再來出卷吧 ✨"); return; }
+  const due=quizDueCards();
+  if(!due.length){ toast("該複習的都複習過了，今天沒有到期的星星——去聊天攢新的吧 🌟"); return; }
+  const pick=due.slice(0,12).map(c=>({term:c.term,gloss:c.gloss||"",context:c.context||""}));
+  const btn=$("quizGo"); const old=btn.textContent; btn.disabled=true; btn.textContent="出卷中…";
+  try{
+    const raw=await callModel(buildQuizSystem(pick),[{role:"user",content:"（出卷）"}],2400);
+    const p=parseReply(raw);
+    const items=(p&&Array.isArray(p.items)?p.items:[]).filter(it=>{
+      if(!it||!it.term||!it.q) return false;
+      if(it.type==="choice") return Array.isArray(it.options)&&it.options.length===4&&Number.isInteger(it.answer)&&it.answer>=0&&it.answer<4;
+      if(it.type==="fill") return typeof it.answer==="string"&&it.answer.trim().length>0;
+      return false;
+    });
+    if(items.length<3){ toast("出卷失敗了，再按一次試試"); return; }
+    quizCur={items:items.map(it=>({...it,user:null})),graded:false};
+    openQuizPane(); renderQuiz();
+  }catch(e){ toast(friendlyErr(String((e&&e.message)||e))); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+}
+function openQuizPane(){ activeCap=null; $("abMenu").style.display="none"; $("capThread").style.display="none"; $("quizPane").style.display="flex"; switchView("ability"); $("composer").style.display="none"; }
+function closeQuizPane(){ quizCur=null; $("quizPane").style.display="none"; $("abMenu").style.display="block"; switchView("ability"); }
+function renderQuiz(){
+  const box=$("quizScroll"); box.innerHTML=""; if(!quizCur) return;
+  quizCur.items.forEach((it,i)=>{
+    const card=document.createElement("div"); card.className="modcard"; card.style.marginBottom="10px"; card.dataset.qi=i;
+    let inner=`<div style="font-weight:700;margin-bottom:8px">${i+1}. ${escapeHtml(it.q)}</div>`;
+    if(it.type==="choice"){
+      inner+=`<div class="btnrow" style="flex-direction:column;gap:6px;align-items:stretch">`+
+        it.options.map((op,oi)=>`<button class="pill quizopt" data-oi="${oi}" style="text-align:left;justify-content:flex-start">${"ABCD"[oi]}. ${escapeHtml(op)}</button>`).join("")+`</div>`;
+    }else{
+      inner+=`<input class="inp quizfill" placeholder="填入這個字…" autocomplete="off" autocapitalize="off">`;
+    }
+    inner+=`<div class="hint quizmark" style="display:none;margin-top:6px"></div>`;
+    card.innerHTML=inner;
+    if(it.type==="choice"){
+      card.querySelectorAll(".quizopt").forEach(b=>b.onclick=()=>{ if(quizCur.graded) return;
+        it.user=parseInt(b.dataset.oi,10);
+        card.querySelectorAll(".quizopt").forEach(x=>x.classList.remove("on")); b.classList.add("on"); });
+    }else{
+      card.querySelector(".quizfill").oninput=e=>{ if(!quizCur.graded) it.user=e.target.value; };
+    }
+    box.appendChild(card);
+  });
+  $("quizSubmit").style.display=""; box.scrollTop=0;
+}
+function gradeQuiz(){
+  if(!quizCur||quizCur.graded) return;
+  const unanswered=quizCur.items.filter(it=>it.user===null||it.user===""||it.user===undefined).length;
+  if(unanswered>0 && !confirm(`還有 ${unanswered} 題沒作答，空白會算錯——確定交卷嗎？`)) return;
+  quizCur.graded=true;
+  const right=[],wrong=[];
+  quizCur.items.forEach((it,i)=>{
+    const ok = it.type==="choice" ? it.user===it.answer
+      : (quizNorm(it.user)===quizNorm(it.answer)||quizNorm(it.user)===quizNorm(it.term));
+    quizWriteBack(it.term,ok); (ok?right:wrong).push(it.term);
+    const card=$("quizScroll").querySelector(`[data-qi="${i}"]`), mk=card.querySelector(".quizmark");
+    card.classList.add(ok?"quizok":"quizbad");
+    mk.style.display="block";
+    const srcCard=S.cards.find(c=>c.term===it.term), gloss=srcCard&&srcCard.gloss?srcCard.gloss:"";
+    if(ok){
+      mk.innerHTML=`<span style="color:var(--good);font-weight:700">✅ 答對了</span>`+(gloss?`　<span style="opacity:.8">${escapeHtml(it.term)}＝${escapeHtml(gloss)}</span>`:"");
+    }else{
+      const ansText = it.type==="choice" ? ("ABCD"[it.answer]+". "+it.options[it.answer]) : it.answer;
+      mk.innerHTML=`<span style="color:var(--warn);font-weight:700">❌ 正解：<b>${escapeHtml(ansText)}</b></span>`+
+        (gloss?`　<span style="opacity:.8">${escapeHtml(it.term)}＝${escapeHtml(gloss)}</span>`:"")+
+        `　<button class="pill quizspeak" style="font-size:11px;padding:2px 9px">🔊 唸</button>`;
+      const sb=mk.querySelector(".quizspeak");
+      if(sb) sb.onclick=()=>{ // 填空題唸整句(空格填回正解),選擇題唸考點字
+        const say = it.type==="fill" ? String(it.q||"").replace(/_{2,}/g," "+it.answer+" ") : it.term;
+        speakSentence(say,sb,mk);
+      };
+    }
+    if(it.type==="choice") card.querySelectorAll(".quizopt").forEach((b,oi)=>{ b.disabled=true; b.classList.remove("on");
+      if(oi===it.answer) b.classList.add("good");
+      else if(!ok&&oi===it.user) b.classList.add("bad"); });
+    else card.querySelector(".quizfill").disabled=true;
+  });
+  save(); renderSky&&renderSky();
+  $("quizSubmit").style.display="none";
+  const sum=document.createElement("div"); sum.className="modcard"; sum.style.marginTop="4px";
+  sum.innerHTML=`<div style="font-weight:800">📊 ${right.length} / ${quizCur.items.length} 對</div>`+
+    `<div class="hint quizcomment" style="margin-top:6px">（夥伴講評準備中…）</div>`+
+    `<div class="btnrow"><button class="cc" id="quizAgainBack">← 回能力頁</button><button class="ok" id="quizAgain">📝 再來一份</button></div>`;
+  $("quizScroll").appendChild(sum); sum.scrollIntoView({behavior:"smooth"});
+  sum.querySelector("#quizAgainBack").onclick=closeQuizPane;
+  sum.querySelector("#quizAgain").onclick=async e=>{ const b=e.currentTarget; b.disabled=true; const o=b.textContent; b.textContent="出卷中…";
+    try{ await startQuiz(); }finally{ if(document.body.contains(b)){ b.disabled=false; b.textContent=o; } } }; // 成功會整卷重繪(按鈕隨舊卷消失);被 toast 擋下則按鈕復原
+  quizComment(right,wrong,quizCur.items.length,sum.querySelector(".quizcomment"));
+}
+async function quizComment(right,wrong,total,el){
+  try{
+    // 給講評的脈絡帶上錯題細節(題目+選錯的內容),讓解析有的放矢
+    const wrongDetail=quizCur.items.filter(it=>wrong.includes(it.term)).map(it=>{
+      const ua = it.type==="choice" ? (Number.isInteger(it.user)?it.options[it.user]:"（空白）") : (it.user||"（空白）");
+      const ca = it.type==="choice" ? it.options[it.answer] : it.answer;
+      return `${it.term}：題「${it.q}」，對方答「${ua}」，正解「${ca}」`;
+    }).join("\n");
+    const msg=`成績：${right.length}/${total} 對。答對的字：${right.join("、")||"（無）"}。\n答錯明細：\n${wrongDetail||"（全對）"}`;
+    const raw=await callModel(buildQuizReviewSystem(),[{role:"user",content:msg}],1100);
+    const p=parseReply(raw), c=p&&(p.comment||p.reply_support||p.reply_target);
+    el.textContent = c ? c : "（講評沒送到，但成績已經寫回記憶了）";
+  }catch(e){ el.textContent="（講評沒送到，但成績已經寫回記憶了）"; }
+}
+
+// ── 雜項 ──
+function updateSendBtn(){ $("sendBtn").disabled=loading||!$("msgInput").value.trim(); }
+function setTheme(t){ S.theme=t; document.body.setAttribute("data-theme",t);
+  const ts=$("themeState"); if(ts) ts.textContent=t==="light"?"淺色":"深色";
+  document.querySelector('meta[name=theme-color]').setAttribute("content",t==="light"?"#F6F1E6":"#0E0B1A"); }
+function checkReady(){ const wb=$("warnbar");
+  if(S.onboard && !S.onboard.done){
+    if(S.onboard.step==="awaken" && !S.settings.keys[S.settings.provider]){ wb.classList.add("show"); wb.textContent=ONBOARD_KEY_HINT; }
+    else wb.classList.remove("show");
+    return;
+  }
+  const prov=S.settings.provider, k=S.settings.keys[prov];
+  if(!k){wb.classList.add("show");wb.innerHTML=`還沒貼 <b>${PROV_LABEL[prov]}</b> 的 key——點右上 ⚙️ 設定貼上，就能開聊囉。`;}else wb.classList.remove("show"); }
+// ── 綁定 ──
+function bind(){
+  $("sendBtn").onclick=()=>{ ($("vAbility").classList.contains("active")&&activeCap)?sendCap():sendDaily(); };
+  const ta=$("msgInput");
+  ta.oninput=()=>{ta.style.height="44px";ta.style.height=Math.min(120,ta.scrollHeight)+"px";updateSendBtn();};
+  ta.onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey&&!/Mobi/i.test(navigator.userAgent)){e.preventDefault();$("sendBtn").click();} };
+  $("setBtn").onclick=openSet;
+  $("soulChip").onclick=openSwitch;
+  $("navChat").onclick=()=>switchView("chat");
+  $("navAbility").onclick=()=>switchView("ability");
+  $("navSky").onclick=()=>switchView("sky");
+  $("capBack").onclick=closeCap;
+  $("capRestart").onclick=()=>{ if(activeCap==="read"){S.readMsgs=[];closeCap();save();} else if(activeCap==="scene"){askConfirm("結束這場、重新接待新場景？",()=>{S.sceneMsgs=[];startScene();save();});} };
+  $("readGo").onclick=readGo; $("readGen").onclick=readGen; $("sceneGo").onclick=startScene;
+  $("quizGo").onclick=startQuiz; $("quizBack").onclick=closeQuizPane; $("quizSubmit").onclick=gradeQuiz;
+  document.querySelectorAll(".modtog").forEach(b=>b.onclick=()=>{ const k=b.dataset.mod; S.mods[k]=!(S.mods[k]!==false); save(); renderMods(); });
+  $("exportBtn").onclick=exportActiveThread;
+  $("crystalExportBtn").onclick=exportCrystal;
+  $("crystalImportBtn").onclick=()=>$("crystalFile").click();
+  $("crystalFile").onchange=e=>{ const f=e.target.files[0]; if(f) importCrystal(f); e.target.value=""; };
+  $("crystalImportBtn").onclick=()=>$("crystalFile").click();
+  $("clearChatBtn").onclick=clearActiveThread;
+  $("readingToggle").onclick=async()=>{ S.reading=!S.reading; save(); updateReadingToggle();
+    renderThread(S.messages,$("chatScroll"),$("chatEmpty"));
+    if(S.reading){ toast("連讀標註中…"); await annotateLatest(); } };
+  $("capExport").onclick=exportActiveThread; $("reviewBtn").onclick=startReviewScene;
+  $("skySearch").oninput=e=>{ skyFilter=e.target.value; renderSky(); };
+  $("skySortBtn").onclick=()=>{ skySort = skySort==="alpha" ? "recent" : "alpha"; renderSky(); };
+  $("copyMdBtn").onclick=()=>{ const t=$("exportText").value;
+    try{ navigator.clipboard.writeText(t); toast("已複製 📋"); }catch(_){ $("exportText").select(); toast("請手動複製（已選取）"); } };
+  $("downloadMdBtn").onclick=()=>{ try{
+    const url=URL.createObjectURL(new Blob([$("exportText").value],{type:"text/markdown"}));
+    const a=document.createElement("a"); a.href=url; a.download=`noctilingo-${_exportLabel||"對話"}-${Date.now()}.md`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("下載中 ⬇");
+  }catch(e){ toast("下載失敗，用複製吧"); } };
+  document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>b.closest(".sheet").classList.remove("open"));
+document.querySelectorAll(".sheet").forEach(sh=>{ if(sh.classList.contains("nodismiss")) return; sh.addEventListener("click",e=>{if(e.target===sh)sh.classList.remove("open");}); });
+  $("provTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{ stashProvField(); provTab=b.dataset.prov; renderProvTabs(); renderProvFields(); });
+  document.querySelectorAll(".menurow[data-panel]").forEach(r=>r.onclick=()=>setPanel(r.dataset.panel));
+  $("themeRow").onclick=()=>{ setTheme(S.theme==="light"?"dark":"light"); save(); };
+  document.querySelectorAll("[data-back]").forEach(b=>b.onclick=setBackToMenu);
+  $("confirmEngine").onclick=confirmEngine; $("cancelEngine").onclick=cancelEngine;
+  $("confirmUser").onclick=confirmUser; $("cancelUser").onclick=cancelUser;
+  $("newSoulBtn").onclick=newSoul; $("saveSoul").onclick=saveSoul; $("cancelSoul").onclick=cancelSoul; $("delSoul").onclick=delSoul; $("expandSoul").onclick=expandSoul;
+  $("nightBtn").onclick=()=>{ if(!S.cards.length){toast("先聊出幾顆星，再過夜～");return;} passNight(); toast("過了一夜 🌙"); };
+  $("resetBtn").onclick=()=>{ askConfirm("把整片記憶迴廊清空、重新開始？所有星星都會消失（對話也一起清）。",()=>{
+    S.messages=[];S.readMsgs=[];S.sceneMsgs=[];S.cards=[];S.grammar=[];S.level={cefr:"—",note:"還在估你的程度"};S.nights=0;S.recap=null;activeCap=null;
+    save();renderThread(S.messages,$("chatScroll"),$("chatEmpty"));renderSky();switchView("chat");toast("清空了"); }); };
+  document.addEventListener("click",e=>{const pop=$("pop");
+    if(pop.style.display==="block"&&!pop.contains(e.target)&&!(e.target.classList&&e.target.classList.contains("w"))){pop.style.display="none";popWordState=null;}});
+  $("popSpeak").onclick=()=>{ const w=$("popWord").textContent.trim(); if(w) speak(w); };
+  $("popKeep").onclick=()=>{
+    if(!popWordState) return;
+    const term=$("popWord").textContent.trim(), g=$("popGloss").textContent.trim();
+    if(!term){ toast("字不能是空的哦"); return; }
+    if(g===""||g==="查詢中…"||g==="查詢失敗（看看 key/網路）"){ toast("還沒查到意思,等一下或重新點一次再收藏哦"); return; }
+    ingest([{term,gloss:g,reason:"asked",context:popWordState.sentence}],[],"");save();$("pop").style.display="none";toast("收進記憶 ⭐");
+  };
+}
+
+// ── 啟動 ──
+function boot(){
+  load(); bind();
+  setTheme(S.theme); renderHeader();
+  renderThread(S.messages,$("chatScroll"),$("chatEmpty")); renderSky(); renderMods(); updateReadingToggle(); updateSendBtn(); checkReady();
+  const today=new Date().toDateString();
+  if(S.lastNight&&S.lastNight!==today&&S.cards.length>0) passNight();
+  if(S.lastNight!==today){S.lastNight=today;save();}
+  if(S.onboard && !S.onboard.done && S.onboard.step==="select") openOnboardSelect();
+  setTimeout(()=>$("splash").classList.add("gone"),1500);
+  setTimeout(()=>{const s=$("splash");if(s)s.remove();},2300);
+}
+boot();
+
+</script>
+</body>
+</html>
